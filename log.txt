@@ -1,0 +1,4 @@
+INFO:2023/12/29 23:31:40 /Users/zhangxingxing/go/src/beginner/cmd/note/std.go:105: INFO
+WARN:2023/12/29 23:31:40 /Users/zhangxingxing/go/src/beginner/cmd/note/std.go:106: WARN
+INFO:2023/12/29 23:32:02 /Users/zhangxingxing/go/src/beginner/cmd/note/std.go:105: INFO
+ERROR:2023/12/29 23:32:02 /Users/zhangxingxing/go/src/beginner/cmd/note/std.go:107: ERROR
