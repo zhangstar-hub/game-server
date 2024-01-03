@@ -24,6 +24,5 @@ func init() {
 	sqlDB.SetMaxOpenConns(100)
 	sqlDB.SetMaxIdleConns(10)
 	sqlDB.SetConnMaxLifetime(5 * time.Minute)
-	// defer sqlDB.Close()
 	println("initialized database")
 }

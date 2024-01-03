@@ -14,6 +14,11 @@ type User struct {
 	Coin       uint64
 }
 
+// 是否是新用户
+func (u *User) IsNewUser() bool {
+	return time.Since(u.FirstLogin) <= 7*time.Hour
+}
+
 func GetUserByName(name, password string) *User {
 	user := User{
 		Name:     name,

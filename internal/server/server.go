@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"my_app/internal/router"
+	"my_app/internal/utils"
 	"net"
 	"os"
 	"os/signal"
@@ -34,51 +35,9 @@ func handleConnection(conn net.Conn, group *sync.WaitGroup) {
 			fmt.Println("Error decoding JSON:", err)
 			continue
 		}
-		fmt.Printf("data: %v\n", data)
-		if _, ok := data["cmd"]; !ok {
-			sendData(&conn, map[string]interface{}{
-				"error": "invalid command",
-			})
-			continue
-		}
-		cmd := data["cmd"].(string)
-		if _, ok := router.Routers[cmd]; !ok {
-			sendData(&conn, map[string]interface{}{
-				"error": "invalid command",
-			})
-			continue
-		}
 
-		if _, ok := data["data"]; !ok {
-			sendData(&conn, map[string]interface{}{
-				"error": "invalid data",
-			})
-			continue
-		}
-		data = data["data"].(map[string]interface{})
-
-		ret, err := func() (r map[string]interface{}, e error) {
-			defer func() {
-				if err := recover(); err != nil {
-					e = err.(error)
-					fmt.Println("Error:", err)
-				}
-			}()
-			r = router.Routers[cmd](data)
-			return
-		}()
-		if err != nil {
-			sendData(&conn, map[string]interface{}{
-				"error": "unknown error",
-			})
-			continue
-		}
-
-		full_ret := map[string]interface{}{
-			"data": ret,
-			"cmd":  cmd,
-		}
-		err = sendData(&conn, full_ret)
+		ret := RequestFunction(&conn, data)
+		err = sendData(&conn, ret)
 		if err != nil {
 			fmt.Println("Error sending data:", err)
 			continue
@@ -127,6 +86,49 @@ func sendData(conn *net.Conn, data map[string]interface{}) (err error) {
 	return nil
 }
 
+// 执行函数入口
+func RequestFunction(conn *net.Conn, data utils.Dict) utils.Dict {
+	if _, ok := data["cmd"]; !ok {
+		return map[string]interface{}{
+			"error": "invalid command",
+		}
+	}
+	cmd := data["cmd"].(string)
+	if _, ok := router.Routers[cmd]; !ok {
+		return map[string]interface{}{
+			"error": "invalid command",
+		}
+	}
+
+	if _, ok := data["data"]; !ok {
+		return map[string]interface{}{
+			"error": "invalid data",
+		}
+	}
+	data = data["data"].(map[string]interface{})
+
+	ret, err := func() (r map[string]interface{}, e error) {
+		defer func() {
+			if err := recover(); err != nil {
+				e = err.(error)
+				fmt.Println("Error:", err)
+			}
+		}()
+		r = router.Routers[cmd](data)
+		return
+	}()
+	if err != nil {
+		return map[string]interface{}{
+			"error": "server error",
+		}
+	}
+	return map[string]interface{}{
+		"cmd":  cmd,
+		"data": ret,
+	}
+
+}
+
 // 监听连接请求
 func HandleServer(tcp *net.TCPListener) {
 	var group sync.WaitGroup
@@ -141,6 +143,18 @@ func HandleServer(tcp *net.TCPListener) {
 		go handleConnection(conn, &group)
 	}
 	group.Wait()
+	os.Exit(0)
+}
+
+// 启动信号监听
+func ListenSignal(c <-chan os.Signal, listener *net.TCPListener) {
+	fmt.Printf("start listening for signals\n")
+	<-c
+	listener.Close()
+	listenNewReq = false
+	fmt.Println("Stop receiving new connections...")
+	<-c
+	fmt.Println("Exiting ...")
 	os.Exit(0)
 }
 
@@ -163,16 +177,4 @@ func StartServer() {
 	go ListenSignal(c, listener)
 	HandleServer(listener)
 	fmt.Println("stop server")
-}
-
-// 启动信号监听
-func ListenSignal(c <-chan os.Signal, listener *net.TCPListener) {
-	fmt.Printf("start listening for signals\n")
-	<-c
-	listener.Close()
-	listenNewReq = false
-	fmt.Println("Stop receiving new connections...")
-	<-c
-	fmt.Println("Exiting ...")
-	os.Exit(0)
 }

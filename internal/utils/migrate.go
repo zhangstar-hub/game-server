@@ -1,4 +1,4 @@
-package migarte
+package utils
 
 import (
 	"my_app/internal/db"
