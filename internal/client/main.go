@@ -69,6 +69,47 @@ func readData(conn *net.Conn) ([]byte, error) {
 	return message, nil
 }
 
+func SendTest() {
+	conn, err := net.Dial("tcp", "localhost:8080")
+	if err != nil {
+		fmt.Println("Error connecting:", err)
+		return
+	}
+	defer conn.Close()
+
+	var n int = 1
+	var data map[string]interface{}
+	switch n {
+	case 1:
+		data = map[string]interface{}{
+			"cmd": "login",
+			"data": map[string]interface{}{
+				"name":     "admin",
+				"password": "admin",
+			},
+		}
+	case 2:
+		data = LongJsonTestData2()
+	}
+
+	// 发送 JSON 数据
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		fmt.Println("Error encoding JSON:", err)
+		return
+	}
+	msgLength := make([]byte, 4)
+	binary.BigEndian.PutUint32(msgLength, uint32(len(jsonData)))
+
+	message := append(msgLength, jsonData...)
+	_, err = conn.Write(message) // 发送消息内容
+	if err != nil {
+		fmt.Println("Error sending message:", err)
+		return
+	}
+	readData(&conn)
+}
+
 func main() {
 	conn, err := net.Dial("tcp", "localhost:8080")
 	if err != nil {

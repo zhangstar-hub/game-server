@@ -21,6 +21,7 @@ func handleConnection(conn net.Conn, group *sync.WaitGroup) {
 	fmt.Println("Client connected:", conn.RemoteAddr())
 
 	for {
+		CanRequest()
 		message, err := readData(&conn)
 		if err != nil {
 			fmt.Println("Error reading data:", err)
