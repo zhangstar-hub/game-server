@@ -42,30 +42,31 @@ func LongJsonTestData2() map[string]interface{} {
 	return data
 }
 
-func connTest() {
-	conn, err := net.Dial("tcp", "localhost:8080")
+// 读取消息内容
+func readData(conn *net.Conn) ([]byte, error) {
+	lenBuffer := make([]byte, 4)
+	_, err := (*conn).Read(lenBuffer)
 	if err != nil {
-		fmt.Println("Error connecting:", err)
-		return
+		return nil, err
 	}
-	defer conn.Close()
-
-	var data map[string]interface{}
-	data = LongJsonTestData1()
-
-	// 发送 JSON 数据
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		fmt.Println("Error encoding JSON:", err)
-		return
+	messageLength := binary.BigEndian.Uint32(lenBuffer)
+	var message []byte
+	var cap_unm uint32
+	for t := messageLength; t > 0; {
+		if t > 4096 {
+			cap_unm = 4096
+		} else {
+			cap_unm = t
+		}
+		new_buffer := make([]byte, cap_unm)
+		n, err := (*conn).Read(new_buffer)
+		if err != nil {
+			return nil, err
+		}
+		message = append(message, new_buffer[:n]...)
+		t -= uint32(n)
 	}
-	msgLength := make([]byte, 4)
-	binary.BigEndian.PutUint32(msgLength, uint32(len(jsonData)))
-
-	fmt.Printf("msgLength: %v %d\n", msgLength, uint32(len(jsonData)))
-	message := append(msgLength, jsonData...)
-	conn.Write(message) // 发送消息内容
-	fmt.Println("Data sent successfully.")
+	return message, nil
 }
 
 func main() {
@@ -83,16 +84,18 @@ func main() {
 		var data map[string]interface{}
 		switch n {
 		case 1:
-			data = LongJsonTestData1()
+			data = map[string]interface{}{
+				"cmd": "login",
+				"data": map[string]interface{}{
+					"name":     "admin",
+					"password": "admin",
+				},
+			}
 		case 2:
 			data = LongJsonTestData2()
 		}
 
 		// 发送 JSON 数据
-		data = map[string]interface{}{
-			"cmd":  "cmd",
-			"data": data,
-		}
 		jsonData, err := json.Marshal(data)
 		if err != nil {
 			fmt.Println("Error encoding JSON:", err)
@@ -103,8 +106,13 @@ func main() {
 
 		fmt.Printf("msgLength: %v %d\n", msgLength, uint32(len(jsonData)))
 		message := append(msgLength, jsonData...)
-		conn.Write(message) // 发送消息内容
-		fmt.Println("Data sent successfully.")
+		_, err = conn.Write(message) // 发送消息内容
+		if err != nil {
+			fmt.Println("Error sending message:", err)
+			return
+		}
+		ret, _ := readData(&conn)
+		fmt.Printf("ret: %s\n", ret)
 	}
 
 }
