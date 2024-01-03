@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 )
 
 var listenNewReq bool = true
@@ -54,8 +55,10 @@ func readData(conn *net.Conn) ([]byte, error) {
 	}
 	messageLength := binary.BigEndian.Uint32(lenBuffer)
 	fmt.Println("messageLength: ", messageLength)
+
 	var message []byte
 	var cap_unm uint32
+	(*conn).SetReadDeadline(time.Now().Add(5 * time.Second))
 	for t := messageLength; t > 0; {
 		if t > 4096 {
 			cap_unm = 4096
@@ -69,6 +72,7 @@ func readData(conn *net.Conn) ([]byte, error) {
 		}
 		message = append(message, new_buffer[:n]...)
 		t -= uint32(n)
+		(*conn).SetReadDeadline(time.Now().Add(5 * time.Second))
 	}
 	return message, nil
 }
