@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"io"
 	"my_app/internal/middleware"
 	"my_app/internal/router"
 	"my_app/internal/src"
@@ -37,7 +38,10 @@ func handleConnection(conn net.Conn, group *sync.WaitGroup) {
 		message, err := readData(conn)
 		if err != nil {
 			fmt.Println("Error reading data:", err)
-			return
+			if err == io.EOF || err == net.ErrClosed {
+				return
+			}
+			continue
 		}
 
 		// 解析 JSON 数据
@@ -85,7 +89,12 @@ func readData(conn net.Conn) ([]byte, error) {
 		conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 	}
 	conn.SetReadDeadline(time.Time{})
-	return message, nil
+
+	decryptedMessage, err := decrypt(message)
+	if err != nil {
+		return nil, err
+	}
+	return decryptedMessage, nil
 }
 
 // 发送数据
@@ -94,10 +103,16 @@ func sendData(conn net.Conn, data map[string]interface{}) (err error) {
 	if err != nil {
 		return err
 	}
+	encryptedMessage, err := Encrypt(jsonData)
+	if err != nil {
+		return err
+	}
+
 	msgLength := make([]byte, 4)
-	binary.BigEndian.PutUint32(msgLength, uint32(len(jsonData)))
-	message := append(msgLength, jsonData...)
+	binary.BigEndian.PutUint32(msgLength, uint32(len(encryptedMessage)))
+	message := append(msgLength, encryptedMessage...)
 	conn.Write(message)
+
 	return nil
 }
 
@@ -182,6 +197,7 @@ func ListenSignal(c <-chan os.Signal, listener *net.TCPListener) {
 		return true
 	})
 	fmt.Println("Exiting ...")
+	// os.Exit(0)
 }
 
 // 启动服务服务

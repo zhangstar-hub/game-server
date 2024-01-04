@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"time"
 )
 
 func LongJsonTestData1() map[string]interface{} {
@@ -43,15 +44,18 @@ func LongJsonTestData2() map[string]interface{} {
 }
 
 // 读取消息内容
-func readData(conn *net.Conn) ([]byte, error) {
+func readData(conn net.Conn) ([]byte, error) {
 	lenBuffer := make([]byte, 4)
-	_, err := (*conn).Read(lenBuffer)
+	_, err := conn.Read(lenBuffer)
 	if err != nil {
 		return nil, err
 	}
 	messageLength := binary.BigEndian.Uint32(lenBuffer)
+	fmt.Println("messageLength: ", messageLength)
+
 	var message []byte
 	var cap_unm uint32
+	conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 	for t := messageLength; t > 0; {
 		if t > 4096 {
 			cap_unm = 4096
@@ -59,14 +63,41 @@ func readData(conn *net.Conn) ([]byte, error) {
 			cap_unm = t
 		}
 		new_buffer := make([]byte, cap_unm)
-		n, err := (*conn).Read(new_buffer)
+		n, err := conn.Read(new_buffer)
 		if err != nil {
 			return nil, err
 		}
 		message = append(message, new_buffer[:n]...)
 		t -= uint32(n)
+		conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 	}
-	return message, nil
+	conn.SetReadDeadline(time.Time{})
+
+	decryptedMessage, err := decrypt(message)
+	if err != nil {
+		return nil, err
+	}
+	return decryptedMessage, nil
+}
+
+// 发送数据
+func sendData(conn net.Conn, data map[string]interface{}) (err error) {
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+	encryptedMessage, err := encrypt(jsonData)
+	if err != nil {
+		return err
+	}
+
+	msgLength := make([]byte, 4)
+	binary.BigEndian.PutUint32(msgLength, uint32(len(encryptedMessage)))
+	message := append(msgLength, encryptedMessage...)
+	conn.Write(message)
+	fmt.Printf("message: %v\n", message)
+	fmt.Printf("jsonData: %s\n", jsonData)
+	return nil
 }
 
 func SendTest() {
@@ -82,7 +113,7 @@ func SendTest() {
 	switch n {
 	case 1:
 		data = map[string]interface{}{
-			"cmd": "login",
+			"cmd": "ReqLogin",
 			"data": map[string]interface{}{
 				"name":     "admin",
 				"password": "admin",
@@ -92,23 +123,9 @@ func SendTest() {
 	case 3:
 		data = LongJsonTestData2()
 	}
-
-	// 发送 JSON 数据
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		fmt.Println("Error encoding JSON:", err)
-		return
-	}
-	msgLength := make([]byte, 4)
-	binary.BigEndian.PutUint32(msgLength, uint32(len(jsonData)))
-
-	message := append(msgLength, jsonData...)
-	_, err = conn.Write(message) // 发送消息内容
-	if err != nil {
-		fmt.Println("Error sending message:", err)
-		return
-	}
-	readData(&conn)
+	sendData(conn, data)
+	ret, _ := readData(conn)
+	fmt.Printf("ret: %v\n", ret)
 }
 
 func main() {
@@ -127,7 +144,7 @@ func main() {
 		switch n {
 		case 1:
 			data = map[string]interface{}{
-				"cmd": "login",
+				"cmd": "ReqLogin",
 				"data": map[string]interface{}{
 					"name":     "admin",
 					"password": "admin",
@@ -135,7 +152,7 @@ func main() {
 			}
 		case 2:
 			data = map[string]interface{}{
-				"cmd": "test",
+				"cmd": "ReqTest",
 				"data": map[string]interface{}{
 					"test": "test",
 				},
@@ -151,22 +168,8 @@ func main() {
 			fmt.Printf("%v %T\n", d["coin"], d["coin"])
 		}
 		// 发送 JSON 数据
-		jsonData, err := json.Marshal(data)
-		if err != nil {
-			fmt.Println("Error encoding JSON:", err)
-			return
-		}
-		msgLength := make([]byte, 4)
-		binary.BigEndian.PutUint32(msgLength, uint32(len(jsonData)))
-
-		fmt.Printf("msgLength: %v %d\n", msgLength, uint32(len(jsonData)))
-		message := append(msgLength, jsonData...)
-		_, err = conn.Write(message) // 发送消息内容
-		if err != nil {
-			fmt.Println("Error sending message:", err)
-			return
-		}
-		ret, _ := readData(&conn)
+		sendData(conn, data)
+		ret, _ := readData(conn)
 		fmt.Printf("ret: %s\n", ret)
 	}
 

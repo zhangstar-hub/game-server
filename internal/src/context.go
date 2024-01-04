@@ -23,8 +23,11 @@ type Ctx struct {
 // 玩家退出清理
 func (ctx *Ctx) Close() {
 	ctx.Conn.Close()
-	ctx.SaveAll()
-	Users.Delete(ctx.User.ID)
+	fmt.Printf("ctx: %v\n", ctx)
+	if ctx.User != nil {
+		ctx.SaveAll()
+		Users.Delete(ctx.User.ID)
+	}
 }
 
 // 退出数据保存

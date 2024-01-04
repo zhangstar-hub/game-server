@@ -10,7 +10,7 @@ import (
 type LoginMiddleware struct{}
 
 func (m *LoginMiddleware) BeforeHandle(ctx *src.Ctx, data utils.Dict) utils.Dict {
-	if ctx.Cmd != "login" && ctx.User == nil {
+	if ctx.Cmd != "ReqLogin" && ctx.User == nil {
 		panic(errors.New("login required"))
 	}
 	return data
