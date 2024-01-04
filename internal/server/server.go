@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"io"
 	"my_app/internal/middleware"
 	"my_app/internal/router"
 	"my_app/internal/src"
@@ -35,12 +34,14 @@ func handleConnection(conn net.Conn, group *sync.WaitGroup) {
 
 	for {
 		CanRequest()
-		message, err := readData(conn)
+		message, err, de_err := readData(conn)
 		if err != nil {
-			fmt.Println("Error reading data:", err)
-			if err == io.EOF || err == net.ErrClosed {
-				return
-			}
+			fmt.Printf("Error reading data: %v, %T\n", err, err)
+			return
+		}
+
+		if de_err != nil {
+			fmt.Printf("Error decoding data: %v, %T\n", de_err, de_err)
 			continue
 		}
 
@@ -61,11 +62,11 @@ func handleConnection(conn net.Conn, group *sync.WaitGroup) {
 }
 
 // 读取消息内容
-func readData(conn net.Conn) ([]byte, error) {
+func readData(conn net.Conn) ([]byte, error, error) {
 	lenBuffer := make([]byte, 4)
 	_, err := conn.Read(lenBuffer)
 	if err != nil {
-		return nil, err
+		return nil, err, nil
 	}
 	messageLength := binary.BigEndian.Uint32(lenBuffer)
 	fmt.Println("messageLength: ", messageLength)
@@ -82,7 +83,7 @@ func readData(conn net.Conn) ([]byte, error) {
 		new_buffer := make([]byte, cap_unm)
 		n, err := conn.Read(new_buffer)
 		if err != nil {
-			return nil, err
+			return nil, err, nil
 		}
 		message = append(message, new_buffer[:n]...)
 		t -= uint32(n)
@@ -92,9 +93,9 @@ func readData(conn net.Conn) ([]byte, error) {
 
 	decryptedMessage, err := decrypt(message)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return decryptedMessage, nil
+	return decryptedMessage, nil, nil
 }
 
 // 发送数据
@@ -197,7 +198,7 @@ func ListenSignal(c <-chan os.Signal, listener *net.TCPListener) {
 		return true
 	})
 	fmt.Println("Exiting ...")
-	// os.Exit(0)
+	os.Exit(0)
 }
 
 // 启动服务服务

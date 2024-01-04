@@ -94,8 +94,10 @@ func sendData(conn net.Conn, data map[string]interface{}) (err error) {
 	msgLength := make([]byte, 4)
 	binary.BigEndian.PutUint32(msgLength, uint32(len(encryptedMessage)))
 	message := append(msgLength, encryptedMessage...)
-	conn.Write(message)
-	fmt.Printf("message: %v\n", message)
+	_, err = conn.Write(message)
+	if err != nil {
+		return err
+	}
 	fmt.Printf("jsonData: %s\n", jsonData)
 	return nil
 }
@@ -123,7 +125,11 @@ func SendTest() {
 	case 3:
 		data = LongJsonTestData2()
 	}
-	sendData(conn, data)
+	err = sendData(conn, data)
+	if err != nil {
+		fmt.Println("Error sending data:", err)
+		return
+	}
 	ret, _ := readData(conn)
 	fmt.Printf("ret: %v\n", ret)
 }
@@ -168,7 +174,11 @@ func main() {
 			fmt.Printf("%v %T\n", d["coin"], d["coin"])
 		}
 		// 发送 JSON 数据
-		sendData(conn, data)
+		err = sendData(conn, data)
+		if err != nil {
+			fmt.Println("Error sending data:", err)
+			return
+		}
 		ret, _ := readData(conn)
 		fmt.Printf("ret: %s\n", ret)
 	}

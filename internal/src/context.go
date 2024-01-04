@@ -23,7 +23,6 @@ type Ctx struct {
 // 玩家退出清理
 func (ctx *Ctx) Close() {
 	ctx.Conn.Close()
-	fmt.Printf("ctx: %v\n", ctx)
 	if ctx.User != nil {
 		ctx.SaveAll()
 		Users.Delete(ctx.User.ID)
