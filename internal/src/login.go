@@ -25,6 +25,6 @@ func Login(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 		"coin": user.Coin,
 	}
 	ctx.User = user
-	Users[ctx.User.ID] = ctx
+	Users.Store(ctx.User.ID, ctx)
 	return ret
 }

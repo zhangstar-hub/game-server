@@ -25,7 +25,11 @@ func handleConnection(conn net.Conn, group *sync.WaitGroup) {
 
 	fmt.Println("Client connected:", conn.RemoteAddr())
 
-	ctx := &src.Ctx{Conn: conn}
+	ctx := &src.Ctx{
+		Conn:           conn,
+		LastActiveTime: time.Now(),
+		LastSaveTime:   time.Now(),
+	}
 	defer ctx.Close()
 
 	for {
@@ -161,7 +165,6 @@ func HandleServer(tcp *net.TCPListener) {
 		go handleConnection(conn, &group)
 	}
 	group.Wait()
-	os.Exit(0)
 }
 
 // 启动信号监听
@@ -172,8 +175,13 @@ func ListenSignal(c <-chan os.Signal, listener *net.TCPListener) {
 	listenNewReq = false
 	fmt.Println("Stop receiving new connections...")
 	<-c
+
+	src.Users.Range(func(key, value interface{}) bool {
+		v := value.(*src.Ctx)
+		v.Close()
+		return true
+	})
 	fmt.Println("Exiting ...")
-	os.Exit(0)
 }
 
 // 启动服务服务
@@ -181,7 +189,7 @@ func StartServer() {
 	tcpAddr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:8080")
 	if err != nil {
 		fmt.Println("Error resolving address:", err)
-		os.Exit(0)
+		return
 	}
 
 	listener, err := net.ListenTCP("tcp", tcpAddr)
@@ -194,6 +202,7 @@ func StartServer() {
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go ListenSignal(c, listener)
 	go UserActiveListener()
+	go AutoSave()
 	HandleServer(listener)
 	fmt.Println("stop server")
 }

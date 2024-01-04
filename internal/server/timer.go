@@ -14,13 +14,33 @@ func UserActiveListener() {
 
 	for range ticker.C {
 		var canDeleteUser []*src.Ctx
-		for _, v := range src.Users {
+		src.Users.Range(func(key, value interface{}) bool {
+			v := value.(*src.Ctx)
 			if time.Since(v.LastActiveTime) > timeoutLimit {
 				canDeleteUser = append(canDeleteUser, v)
 			}
-		}
+			return true
+		})
 		for _, v := range canDeleteUser {
 			v.Close()
 		}
+	}
+}
+
+// 定期存储数据 防止数据丢失
+func AutoSave() {
+	saveTime := 10 * time.Minute
+
+	ticker := time.NewTicker(1 * time.Minute)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		src.Users.Range(func(key, value interface{}) bool {
+			v := value.(*src.Ctx)
+			if time.Since(v.LastSaveTime) > saveTime {
+				v.SaveAll()
+			}
+			return true
+		})
 	}
 }
