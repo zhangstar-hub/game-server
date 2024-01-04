@@ -4,6 +4,8 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"my_app/internal/ctx"
+	"my_app/internal/middleware"
 	"my_app/internal/router"
 	"my_app/internal/utils"
 	"net"
@@ -20,11 +22,14 @@ var listenNewReq bool = true
 func handleConnection(conn net.Conn, group *sync.WaitGroup) {
 	defer conn.Close()
 	defer group.Done()
+
 	fmt.Println("Client connected:", conn.RemoteAddr())
+
+	ctx := &ctx.Ctx{Conn: conn}
 
 	for {
 		CanRequest()
-		message, err := readData(&conn)
+		message, err := readData(conn)
 		if err != nil {
 			fmt.Println("Error reading data:", err)
 			return
@@ -37,8 +42,8 @@ func handleConnection(conn net.Conn, group *sync.WaitGroup) {
 			continue
 		}
 
-		ret := RequestFunction(&conn, data)
-		err = sendData(&conn, ret)
+		ret := RequestFunction(ctx, data)
+		err = sendData(conn, ret)
 		if err != nil {
 			fmt.Println("Error sending data:", err)
 			continue
@@ -47,9 +52,9 @@ func handleConnection(conn net.Conn, group *sync.WaitGroup) {
 }
 
 // 读取消息内容
-func readData(conn *net.Conn) ([]byte, error) {
+func readData(conn net.Conn) ([]byte, error) {
 	lenBuffer := make([]byte, 4)
-	_, err := (*conn).Read(lenBuffer)
+	_, err := conn.Read(lenBuffer)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +63,7 @@ func readData(conn *net.Conn) ([]byte, error) {
 
 	var message []byte
 	var cap_unm uint32
-	(*conn).SetReadDeadline(time.Now().Add(5 * time.Second))
+	conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 	for t := messageLength; t > 0; {
 		if t > 4096 {
 			cap_unm = 4096
@@ -66,19 +71,20 @@ func readData(conn *net.Conn) ([]byte, error) {
 			cap_unm = t
 		}
 		new_buffer := make([]byte, cap_unm)
-		n, err := (*conn).Read(new_buffer)
+		n, err := conn.Read(new_buffer)
 		if err != nil {
 			return nil, err
 		}
 		message = append(message, new_buffer[:n]...)
 		t -= uint32(n)
-		(*conn).SetReadDeadline(time.Now().Add(5 * time.Second))
+		conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 	}
+	conn.SetReadDeadline(time.Time{})
 	return message, nil
 }
 
 // 发送数据
-func sendData(conn *net.Conn, data map[string]interface{}) (err error) {
+func sendData(conn net.Conn, data map[string]interface{}) (err error) {
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		return err
@@ -86,12 +92,12 @@ func sendData(conn *net.Conn, data map[string]interface{}) (err error) {
 	msgLength := make([]byte, 4)
 	binary.BigEndian.PutUint32(msgLength, uint32(len(jsonData)))
 	message := append(msgLength, jsonData...)
-	(*conn).Write(message)
+	conn.Write(message)
 	return nil
 }
 
 // 执行函数入口
-func RequestFunction(conn *net.Conn, data utils.Dict) utils.Dict {
+func RequestFunction(ctx *ctx.Ctx, data utils.Dict) utils.Dict {
 	if _, ok := data["cmd"]; !ok {
 		return map[string]interface{}{
 			"error": "invalid command",
@@ -118,7 +124,14 @@ func RequestFunction(conn *net.Conn, data utils.Dict) utils.Dict {
 				fmt.Println("Error:", err)
 			}
 		}()
-		r = router.Routers[cmd](data)
+		ctx.Cmd = cmd
+		for _, f := range middleware.MiddlewareList {
+			data = f.BeforeHandle(ctx, data)
+		}
+		r = router.Routers[cmd](ctx, data)
+		for _, f := range middleware.MiddlewareList {
+			r = f.AfterHandle(ctx, r)
+		}
 		return
 	}()
 	if err != nil {

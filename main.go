@@ -1,8 +1,8 @@
 package main
 
 import (
+	_ "my_app/internal/router"
 	"my_app/internal/server"
-	_ "my_app/internal/utils"
 )
 
 func main() {

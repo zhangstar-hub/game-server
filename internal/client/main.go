@@ -88,7 +88,8 @@ func SendTest() {
 				"password": "admin",
 			},
 		}
-	case 2:
+
+	case 3:
 		data = LongJsonTestData2()
 	}
 
@@ -133,6 +134,13 @@ func main() {
 				},
 			}
 		case 2:
+			data = map[string]interface{}{
+				"cmd": "test",
+				"data": map[string]interface{}{
+					"test": "test",
+				},
+			}
+		case 3:
 			data = LongJsonTestData2()
 		}
 
