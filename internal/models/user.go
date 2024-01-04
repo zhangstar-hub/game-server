@@ -1,14 +1,18 @@
 package models
 
 import (
+	"errors"
+	"fmt"
 	"my_app/internal/db"
 	"time"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 type User struct {
-	ID         uint `gorm:"primary_key"`
-	Name       string
-	password   string
+	ID         uint   `gorm:"primary_key"`
+	Name       string `gorm:"unique"`
+	Password   string
 	FirstLogin time.Time
 	LastLogin  time.Time
 	Coin       uint64
@@ -19,25 +23,33 @@ func (u *User) IsNewUser() bool {
 	return time.Since(u.FirstLogin) <= 7*time.Hour
 }
 
-func GetUserByName(name, password string) *User {
-	user := User{
-		Name:     name,
-		password: password,
-	}
+func GetUserByName(name, password string) (*User, error) {
+	user := User{Name: name}
 	tx := db.DB.Where(&user).First(&user)
 	if tx.RowsAffected == 0 {
-		return nil
+		return nil, nil
 	}
-	return &user
+	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+	if err != nil {
+		return nil, errors.New("password error")
+	}
+	return &user, nil
 }
 
 func CreateUser(name, password string) *User {
-	user := User{
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		panic(errors.New("error hashing password"))
+	}
+
+	user := &User{
 		Name:       name,
-		password:   password,
+		Password:   string(hashedPassword),
 		FirstLogin: time.Now(),
 		LastLogin:  time.Now(),
 	}
+	fmt.Printf("user: %#v\n", user)
 	db.DB.Create(user)
-	return &user
+	return user
 }
