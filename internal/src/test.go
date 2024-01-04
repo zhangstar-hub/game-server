@@ -4,7 +4,7 @@ import (
 	"my_app/internal/utils"
 )
 
-func Test(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
+func ReqTest(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 	ret = make(utils.Dict)
 	ret["test"] = "test"
 	return ret

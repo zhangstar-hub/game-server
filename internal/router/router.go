@@ -8,7 +8,8 @@ import (
 type viewFunction func(ctx *src.Ctx, data utils.Dict) utils.Dict
 
 var Routers = map[string]viewFunction{
-	"login":      src.Login,
-	"test":       src.Test,
-	"ReqAddCoin": src.ReqAddCoin,
+	"ReqLogin":      src.ReqLogin,
+	"ReqTest":       src.ReqTest,
+	"ReqAddCoin":    src.ReqAddCoin,
+	"ReqGetMission": src.ReqGetMission,
 }

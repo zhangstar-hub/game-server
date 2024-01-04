@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func Login(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
+func ReqLogin(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 	ret = make(utils.Dict)
 
 	name := strings.TrimSpace(data["name"].(string))
