@@ -1,14 +1,12 @@
 package src
 
 import (
-	"fmt"
-	"my_app/internal/ctx"
 	"my_app/internal/models"
 	"my_app/internal/utils"
 	"strings"
 )
 
-func Login(ctx *ctx.Ctx, data utils.Dict) (ret utils.Dict) {
+func Login(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 	ret = make(utils.Dict)
 
 	name := strings.TrimSpace(data["name"].(string))
@@ -21,12 +19,12 @@ func Login(ctx *ctx.Ctx, data utils.Dict) (ret utils.Dict) {
 	if user == nil {
 		user = models.CreateUser(name, password)
 	}
-	fmt.Println(3)
 	ret["user"] = utils.Dict{
 		"id":   user.ID,
 		"name": user.Name,
 		"coin": user.Coin,
 	}
 	ctx.User = user
+	Users[ctx.User.ID] = ctx
 	return ret
 }

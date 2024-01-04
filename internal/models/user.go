@@ -23,6 +23,11 @@ func (u *User) IsNewUser() bool {
 	return time.Since(u.FirstLogin) <= 7*time.Hour
 }
 
+// 保存数据
+func (u *User) Save() error {
+	return db.DB.Save(u).Error
+}
+
 func GetUserByName(name, password string) (*User, error) {
 	user := User{Name: name}
 	tx := db.DB.Where(&user).First(&user)

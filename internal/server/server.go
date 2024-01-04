@@ -4,9 +4,9 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"my_app/internal/ctx"
 	"my_app/internal/middleware"
 	"my_app/internal/router"
+	"my_app/internal/src"
 	"my_app/internal/utils"
 	"net"
 	"os"
@@ -25,7 +25,8 @@ func handleConnection(conn net.Conn, group *sync.WaitGroup) {
 
 	fmt.Println("Client connected:", conn.RemoteAddr())
 
-	ctx := &ctx.Ctx{Conn: conn}
+	ctx := &src.Ctx{Conn: conn}
+	defer ctx.Close()
 
 	for {
 		CanRequest()
@@ -97,7 +98,7 @@ func sendData(conn net.Conn, data map[string]interface{}) (err error) {
 }
 
 // 执行函数入口
-func RequestFunction(ctx *ctx.Ctx, data utils.Dict) utils.Dict {
+func RequestFunction(ctx *src.Ctx, data utils.Dict) utils.Dict {
 	if _, ok := data["cmd"]; !ok {
 		return map[string]interface{}{
 			"error": "invalid command",
@@ -192,6 +193,7 @@ func StartServer() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go ListenSignal(c, listener)
+	go UserActiveListener()
 	HandleServer(listener)
 	fmt.Println("stop server")
 }

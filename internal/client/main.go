@@ -141,9 +141,15 @@ func main() {
 				},
 			}
 		case 3:
-			data = LongJsonTestData2()
+			d := map[string]interface{}{
+				"coin": 1,
+			}
+			data = map[string]interface{}{
+				"cmd":  "ReqAddCoin",
+				"data": d,
+			}
+			fmt.Printf("%v %T\n", d["coin"], d["coin"])
 		}
-
 		// 发送 JSON 数据
 		jsonData, err := json.Marshal(data)
 		if err != nil {
