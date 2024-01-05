@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"errors"
+	"fmt"
 	"my_app/internal/src"
 	"my_app/internal/utils"
 	"time"
@@ -9,8 +10,15 @@ import (
 
 type LoginMiddleware struct{}
 
+// 不需要登录就可以接受的请求
+var NoLoingReqList = []string{
+	"ReqLogin", "ReqZmqTest",
+}
+
 func (m *LoginMiddleware) BeforeHandle(ctx *src.Ctx, data utils.Dict) utils.Dict {
-	if ctx.Cmd != "ReqLogin" && ctx.User == nil {
+	index := utils.ArrayIndexOfString(NoLoingReqList, ctx.Cmd)
+	fmt.Printf("index: %v\n", index)
+	if index == -1 && ctx.User == nil {
 		panic(errors.New("login required"))
 	}
 	return data

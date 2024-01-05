@@ -12,4 +12,5 @@ var Routers = map[string]viewFunction{
 	"ReqTest":       src.ReqTest,
 	"ReqAddCoin":    src.ReqAddCoin,
 	"ReqGetMission": src.ReqGetMission,
+	"ReqZmqTest":    src.ReqZmqTest,
 }

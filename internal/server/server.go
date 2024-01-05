@@ -8,6 +8,7 @@ import (
 	"my_app/internal/router"
 	"my_app/internal/src"
 	"my_app/internal/utils"
+	"my_app/internal/zmqClient"
 	"net"
 	"os"
 	"os/signal"
@@ -224,6 +225,7 @@ func StartServer() {
 	go ListenSignal(c, listener)
 	go UserActiveListener()
 	go AutoSave()
+	go zmqClient.MessageListener()
 	HandleServer(listener)
 	fmt.Println("stop server")
 }

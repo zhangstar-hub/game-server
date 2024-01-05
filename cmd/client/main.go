@@ -171,7 +171,11 @@ func main() {
 				"cmd":  "ReqAddCoin",
 				"data": d,
 			}
-			fmt.Printf("%v %T\n", d["coin"], d["coin"])
+		case 4:
+			data = map[string]interface{}{
+				"cmd":  "ReqZmqTest",
+				"data": map[string]interface{}{},
+			}
 		}
 		// 发送 JSON 数据
 		err = sendData(conn, data)
