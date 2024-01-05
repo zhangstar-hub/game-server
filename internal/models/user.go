@@ -25,6 +25,9 @@ func (u *User) IsNewUser() bool {
 
 // 保存数据
 func (u *User) Save() error {
+	if u == nil {
+		return nil
+	}
 	return db.DB.Save(u).Error
 }
 

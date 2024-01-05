@@ -2,6 +2,7 @@ package src
 
 import (
 	"fmt"
+	"my_app/internal/db"
 	"my_app/internal/models"
 	"net"
 	"sync"
@@ -16,6 +17,7 @@ type Ctx struct {
 	Cmd            string    // 当前处理的命令
 	LastActiveTime time.Time // 上一次存活的时间
 	LastSaveTime   time.Time // 上一次存档的时间
+	Token          string    // 登录产生的唯一ID
 
 	User *models.User
 }
@@ -23,10 +25,8 @@ type Ctx struct {
 // 玩家退出清理
 func (ctx *Ctx) Close() {
 	ctx.Conn.Close()
-	if ctx.User != nil {
-		ctx.SaveAll()
-		Users.Delete(ctx.User.ID)
-	}
+	ctx.SaveAll()
+	Users.Delete(ctx.Token)
 }
 
 // 退出数据保存
@@ -35,4 +35,12 @@ func (ctx *Ctx) SaveAll() {
 	if err != nil {
 		fmt.Println(err)
 	}
+}
+
+// 检测玩家是否在线
+func (ctx *Ctx) IsOnline(uid uint) bool {
+	key := fmt.Sprintf("user:%d", uid)
+	client := db.NewRedis()
+	ret, _ := client.Exists(key)
+	return ret > 0
 }

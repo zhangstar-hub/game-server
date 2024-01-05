@@ -14,23 +14,27 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 var listenNewReq bool = true
 
 // 处理请求
 func handleConnection(conn net.Conn, group *sync.WaitGroup) {
-	defer conn.Close()
 	defer group.Done()
 
 	fmt.Println("Client connected:", conn.RemoteAddr())
 
+	token := uuid.NewString()
 	ctx := &src.Ctx{
 		Conn:           conn,
 		LastActiveTime: time.Now(),
 		LastSaveTime:   time.Now(),
+		Token:          token,
 	}
 	defer ctx.Close()
+	src.Users.Store(token, ctx)
 
 	for {
 		CanRequest()

@@ -19,12 +19,16 @@ func ReqLogin(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 	if user == nil {
 		user = models.CreateUser(name, password)
 	}
+
+	if ok := ctx.IsOnline(user.ID); ok {
+		ctx.SaveAll()
+	}
+
 	ret["user"] = utils.Dict{
 		"id":   user.ID,
 		"name": user.Name,
 		"coin": user.Coin,
 	}
 	ctx.User = user
-	Users.Store(ctx.User.ID, ctx)
 	return ret
 }
