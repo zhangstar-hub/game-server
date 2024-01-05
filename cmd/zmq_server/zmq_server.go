@@ -26,7 +26,7 @@ func main() {
 			continue
 		}
 		for client := range clients {
-			_, _ = server.SendMessage(client, "Hello to client "+client)
+			_, _ = server.SendMessage(client, message)
 		}
 	}
 }

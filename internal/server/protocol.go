@@ -55,6 +55,7 @@ func decrypt(ciphertext []byte) ([]byte, error) {
 	nonce, ciphertext := ciphertext[:nonceSize], ciphertext[nonceSize:]
 	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
 	if err != nil {
+		fmt.Printf("log 4: %v\n", err)
 		return nil, err
 	}
 

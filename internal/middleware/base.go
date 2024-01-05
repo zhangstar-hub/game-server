@@ -1,15 +1,15 @@
 package middleware
 
 import (
-	"my_app/internal/src"
+	"my_app/internal/context"
 	"my_app/internal/utils"
 )
 
 var MiddlewareList []Middleware
 
 type Middleware interface {
-	BeforeHandle(ctx *src.Ctx, data utils.Dict) utils.Dict
-	AfterHandle(ctx *src.Ctx, ret utils.Dict) utils.Dict
+	BeforeHandle(ctx *context.Ctx, data utils.Dict) utils.Dict
+	AfterHandle(ctx *context.Ctx, ret utils.Dict) utils.Dict
 }
 
 func RegisterMiddleware(middleware Middleware) {

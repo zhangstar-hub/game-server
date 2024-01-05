@@ -17,6 +17,13 @@ type Redis struct {
 	client *redis.Client
 }
 
+// 定义一个redis连接池
+var RedisClient *Redis
+
+func init() {
+	RedisClient = NewRedis()
+}
+
 func NewRedis() *Redis {
 	client := redis.NewClient(&redis.Options{
 		Addr:         address,

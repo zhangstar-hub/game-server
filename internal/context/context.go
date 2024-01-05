@@ -1,4 +1,4 @@
-package src
+package context
 
 import (
 	"fmt"
@@ -27,6 +27,9 @@ func (ctx *Ctx) Close() {
 	ctx.Conn.Close()
 	ctx.SaveAll()
 	Users.Delete(ctx.Token)
+	if ctx.User != nil {
+		ctx.SetOffline(ctx.User.ID)
+	}
 }
 
 // 退出数据保存
@@ -40,7 +43,18 @@ func (ctx *Ctx) SaveAll() {
 // 检测玩家是否在线
 func (ctx *Ctx) IsOnline(uid uint) bool {
 	key := fmt.Sprintf("user:%d", uid)
-	client := db.NewRedis()
-	ret, _ := client.Exists(key)
+	ret, _ := db.RedisClient.Exists(key)
 	return ret > 0
+}
+
+// 标记玩家为在线玩家
+func (ctx *Ctx) SetOnline(uid uint) {
+	key := fmt.Sprintf("user:%d", uid)
+	db.RedisClient.Set(key, "1", time.Hour*24*14)
+}
+
+// 设置玩家为离线玩家
+func (ctx *Ctx) SetOffline(uid uint) {
+	key := fmt.Sprintf("user:%d", uid)
+	db.RedisClient.Delete(key)
 }

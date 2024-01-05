@@ -4,11 +4,11 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"my_app/internal/context"
 	"my_app/internal/middleware"
 	"my_app/internal/router"
-	"my_app/internal/src"
 	"my_app/internal/utils"
-	"my_app/internal/zmqClient"
+	"my_app/internal/zmq_client"
 	"net"
 	"os"
 	"os/signal"
@@ -28,14 +28,14 @@ func handleConnection(conn net.Conn, group *sync.WaitGroup) {
 	fmt.Println("Client connected:", conn.RemoteAddr())
 
 	token := uuid.NewString()
-	ctx := &src.Ctx{
+	ctx := &context.Ctx{
 		Conn:           conn,
 		LastActiveTime: time.Now(),
 		LastSaveTime:   time.Now(),
 		Token:          token,
 	}
 	defer ctx.Close()
-	src.Users.Store(token, ctx)
+	context.Users.Store(token, ctx)
 
 	for {
 		CanRequest()
@@ -123,7 +123,7 @@ func sendData(conn net.Conn, data map[string]interface{}) (err error) {
 }
 
 // 执行函数入口
-func RequestFunction(ctx *src.Ctx, data utils.Dict) utils.Dict {
+func RequestFunction(ctx *context.Ctx, data utils.Dict) utils.Dict {
 	if _, ok := data["cmd"]; !ok {
 		return map[string]interface{}{
 			"error": "invalid command",
@@ -147,6 +147,7 @@ func RequestFunction(ctx *src.Ctx, data utils.Dict) utils.Dict {
 		defer func() {
 			if err := recover(); err != nil {
 				e = err.(error)
+				utils.PrintStackTrace()
 				fmt.Println("Error:", err)
 			}
 		}()
@@ -197,8 +198,8 @@ func ListenSignal(c <-chan os.Signal, listener *net.TCPListener) {
 	fmt.Println("Stop receiving new connections...")
 	<-c
 
-	src.Users.Range(func(key, value interface{}) bool {
-		v := value.(*src.Ctx)
+	context.Users.Range(func(key, value interface{}) bool {
+		v := value.(*context.Ctx)
 		v.Close()
 		return true
 	})
@@ -225,7 +226,7 @@ func StartServer() {
 	go ListenSignal(c, listener)
 	go UserActiveListener()
 	go AutoSave()
-	go zmqClient.MessageListener()
+	go zmq_client.MessageListener()
 	HandleServer(listener)
 	fmt.Println("stop server")
 }

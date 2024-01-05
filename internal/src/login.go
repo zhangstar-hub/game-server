@@ -1,12 +1,16 @@
 package src
 
 import (
+	"errors"
+	"my_app/internal/context"
 	"my_app/internal/models"
 	"my_app/internal/utils"
+	"my_app/internal/zmq_client"
 	"strings"
+	"time"
 )
 
-func ReqLogin(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
+func ReqLogin(ctx *context.Ctx, data utils.Dict) (ret utils.Dict) {
 	ret = make(utils.Dict)
 
 	name := strings.TrimSpace(data["name"].(string))
@@ -19,16 +23,25 @@ func ReqLogin(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 	if user == nil {
 		user = models.CreateUser(name, password)
 	}
-
-	if ok := ctx.IsOnline(user.ID); ok {
-		ctx.SaveAll()
+	startTime := time.Now()
+	for ok := ctx.IsOnline(user.ID); ok; {
+		if time.Since(startTime) > 10*time.Second {
+			panic(errors.New("login timeout"))
+		}
+		zmq_client.ZClient.Send(map[string]interface{}{
+			"cmd": "ReqUserExit",
+			"data": map[string]interface{}{
+				"uid": user.ID,
+			},
+		})
+		time.Sleep(200 * time.Millisecond)
 	}
-
+	ctx.SetOnline(user.ID)
+	ctx.User = user
 	ret["user"] = utils.Dict{
 		"id":   user.ID,
 		"name": user.Name,
 		"coin": user.Coin,
 	}
-	ctx.User = user
 	return ret
 }

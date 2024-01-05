@@ -1,3 +1,3 @@
 package utils
 
-type Dict map[string]interface{}
+type Dict = map[string]interface{}
