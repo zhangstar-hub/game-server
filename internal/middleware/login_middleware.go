@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"errors"
-	"fmt"
 	"my_app/internal/context"
 	"my_app/internal/utils"
 	"time"
@@ -17,7 +16,6 @@ var NoLoingReqList = []string{
 
 func (m *LoginMiddleware) BeforeHandle(ctx *context.Ctx, data utils.Dict) utils.Dict {
 	index := utils.ArrayIndexOfString(NoLoingReqList, ctx.Cmd)
-	fmt.Printf("index: %v\n", index)
 	if index == -1 && ctx.User == nil {
 		panic(errors.New("login required"))
 	}

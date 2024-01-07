@@ -23,18 +23,16 @@ func ReqLogin(ctx *context.Ctx, data utils.Dict) (ret utils.Dict) {
 	if user == nil {
 		user = models.CreateUser(name, password)
 	}
-	startTime := time.Now()
-	for ok := ctx.IsOnline(user.ID); ok; {
-		if time.Since(startTime) > 10*time.Second {
-			panic(errors.New("login timeout"))
+	if ok := ctx.IsOnline(user.ID); ok {
+		startTime := time.Now()
+		zmq_client.QuitMessage(user.ID)
+		for ok := ctx.IsOnline(user.ID); ok; ok = ctx.IsOnline(user.ID) {
+			if time.Since(startTime) > 10*time.Second {
+				panic(errors.New("login timeout"))
+			}
+			time.Sleep(200 * time.Millisecond)
 		}
-		zmq_client.ZClient.Send(map[string]interface{}{
-			"cmd": "ReqUserExit",
-			"data": map[string]interface{}{
-				"uid": user.ID,
-			},
-		})
-		time.Sleep(200 * time.Millisecond)
+		user, _ = models.GetUserByName(name, password)
 	}
 	ctx.SetOnline(user.ID)
 	ctx.User = user
