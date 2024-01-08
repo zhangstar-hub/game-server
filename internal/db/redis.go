@@ -2,15 +2,10 @@ package db
 
 import (
 	"context"
+	"my_app/env"
 	"time"
 
 	"github.com/go-redis/redis/v8"
-)
-
-const (
-	address  = "127.0.0.1:6379"
-	password = ""
-	db       = 0
 )
 
 type Redis struct {
@@ -20,15 +15,15 @@ type Redis struct {
 // 定义一个redis连接池
 var RedisClient *Redis
 
-func init() {
+func InitRedis() {
 	RedisClient = NewRedis()
 }
 
 func NewRedis() *Redis {
+
 	client := redis.NewClient(&redis.Options{
-		Addr:         address,
-		Password:     password,
-		DB:           db,
+		Addr:         env.E.Redis.Address,
+		DB:           env.E.Redis.DB,
 		PoolSize:     10,               // 连接池中连接的最大数量
 		MinIdleConns: 5,                // 最小空闲连接数
 		IdleTimeout:  30 * time.Second, // 空闲连接超时时间

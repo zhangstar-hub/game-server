@@ -1,6 +1,8 @@
 package db
 
 import (
+	"fmt"
+	"my_app/env"
 	"time"
 
 	"gorm.io/driver/mysql"
@@ -9,8 +11,11 @@ import (
 
 var DB *gorm.DB
 
-func init() {
-	dsn := "root:123456@tcp(127.0.0.1:3306)/my_app?charset=utf8mb4&parseTime=True&loc=Local"
+func InitDB() {
+	dsn := fmt.Sprintf(
+		"%s:%s@tcp(%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+		env.E.Mysql.User, env.E.Mysql.Password, env.E.Mysql.Address, env.E.Mysql.Database,
+	)
 
 	var err error
 	DB, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})

@@ -13,12 +13,9 @@ func ReqTest(data utils.Dict) {
 
 // 把玩家掉线
 func ReqUserExit(data utils.Dict) {
-	fmt.Printf("ReqUserExit: %#v\n", data)
-	fmt.Printf("context.Users: %v\n", utils.SynMapLength(&context.Users))
 	context.Users.Range(func(key, value interface{}) bool {
 		v := value.(*context.Ctx)
 		if v.User != nil && v.User.ID == uint(data["uid"].(float64)) {
-			fmt.Printf("close: %v\n", v.User)
 			v.Close()
 			return false
 		}
