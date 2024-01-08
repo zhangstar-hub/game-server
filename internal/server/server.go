@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"my_app/env"
 	"my_app/internal/context"
 	"my_app/internal/middleware"
 	"my_app/internal/router"
@@ -209,7 +210,7 @@ func ListenSignal(c <-chan os.Signal, listener *net.TCPListener) {
 
 // 启动服务服务
 func StartServer() {
-	tcpAddr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:8080")
+	tcpAddr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", env.E.App.Host, env.E.App.Port))
 	if err != nil {
 		fmt.Println("Error resolving address:", err)
 		return

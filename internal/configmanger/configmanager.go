@@ -2,6 +2,7 @@ package configmanger
 
 import (
 	"encoding/json"
+	"my_app/internal/utils"
 	"os"
 	"path/filepath"
 )
@@ -10,9 +11,12 @@ const (
 	CFGPath = "config"
 )
 
+// 不加载的文件列表
+var ExcludeFiles = [...]string{"config.json"}
+
 var CONFIG map[string]interface{}
 
-func init() {
+func LoadCofnig() {
 	CONFIG = make(map[string]interface{})
 
 	files, err := os.ReadDir(CFGPath)
@@ -21,6 +25,9 @@ func init() {
 	}
 
 	for _, f := range files {
+		if index := utils.ArrayIndexOfString(ExcludeFiles[:], f.Name()); index >= 0 {
+			continue
+		}
 		file, err := os.OpenFile(filepath.Join(CFGPath, f.Name()), os.O_RDWR, 0444)
 		if err != nil {
 			panic(err)

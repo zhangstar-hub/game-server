@@ -5,6 +5,6 @@ import (
 	"my_app/internal/models"
 )
 
-func init() {
+func MirateTable() {
 	db.DB.AutoMigrate(&models.User{}, &models.Mission{})
 }

@@ -3,6 +3,7 @@ package zmq_client
 import (
 	"encoding/json"
 	"fmt"
+	"my_app/env"
 	"my_app/internal/utils"
 
 	"github.com/pebbe/zmq4"
@@ -18,9 +19,9 @@ type ZMQClient struct {
 
 var ZClient ZMQClient
 
-func init() {
+func InitZMQClient() {
 	client, _ := zmq4.NewSocket(zmq4.DEALER)
-	client.SetIdentity(fmt.Sprintf("%s:%d", utils.GetLocalIP(), utils.GetPid()))
+	client.SetIdentity(fmt.Sprintf("%s:%d", utils.GetLocalIP(), env.E.App.Port))
 
 	ZClient = ZMQClient{client: client}
 	err := client.Connect(ZmqServerAddr)
