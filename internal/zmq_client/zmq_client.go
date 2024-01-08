@@ -40,14 +40,15 @@ func (z ZMQClient) Send(data map[string]interface{}) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	return z.client.Send(string(json), 0)
+	return z.client.SendBytes(json, 0)
 }
 
 // 从中心服务器接受数据
-func (z ZMQClient) Recv() (string, error) {
-	return z.client.Recv(0)
+func (z ZMQClient) Recv() ([]byte, error) {
+	return z.client.RecvBytes(0)
 }
 
+// 数据接口监听
 // 数据接口监听
 func MessageListener() {
 	for {
@@ -58,7 +59,7 @@ func MessageListener() {
 			continue
 		}
 		messageMap := make(map[string]interface{})
-		err = json.Unmarshal([]byte(message), &messageMap)
+		err = json.Unmarshal(message, &messageMap)
 		if err != nil {
 			fmt.Printf("message unmarshal error %s\n", err)
 			continue
