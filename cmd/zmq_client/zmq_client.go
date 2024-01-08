@@ -2,12 +2,14 @@ package main
 
 import (
 	"fmt"
+	"my_app/internal/utils"
 
 	"github.com/pebbe/zmq4"
 )
 
 func main() {
 	client1, _ := zmq4.NewSocket(zmq4.DEALER)
+	client1.SetIdentity(fmt.Sprintf("%s:%d", utils.GetLocalIP(), utils.GetPid()))
 	defer client1.Close()
 
 	_ = client1.Connect("tcp://127.0.0.1:5555")

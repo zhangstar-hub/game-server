@@ -18,6 +18,7 @@ func main() {
 
 	for {
 		msg, _ := server.RecvMessage(0)
+		fmt.Printf("msg: %v\n", msg)
 
 		clientID, message := msg[0], msg[1]
 		clients[clientID] = true

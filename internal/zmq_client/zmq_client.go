@@ -20,8 +20,9 @@ var ZClient ZMQClient
 
 func init() {
 	client, _ := zmq4.NewSocket(zmq4.DEALER)
-	ZClient = ZMQClient{client: client}
+	client.SetIdentity(fmt.Sprintf("%s:%d", utils.GetLocalIP(), utils.GetPid()))
 
+	ZClient = ZMQClient{client: client}
 	err := client.Connect(ZmqServerAddr)
 	if err != nil {
 		panic(fmt.Sprintf("无法连接中心服务器：%s", ZmqServerAddr))
