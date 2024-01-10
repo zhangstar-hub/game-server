@@ -2,7 +2,7 @@ package db
 
 import (
 	"context"
-	"my_app/env"
+	"my_app/internal/config"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -20,10 +20,10 @@ func InitRedis() {
 }
 
 func NewRedis() *Redis {
-
+	conf := config.GetC()
 	client := redis.NewClient(&redis.Options{
-		Addr:         env.E.Redis.Address,
-		DB:           env.E.Redis.DB,
+		Addr:         conf.Env.Redis.Address,
+		DB:           conf.Env.Redis.DB,
 		PoolSize:     10,               // 连接池中连接的最大数量
 		MinIdleConns: 5,                // 最小空闲连接数
 		IdleTimeout:  30 * time.Second, // 空闲连接超时时间

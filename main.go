@@ -1,8 +1,7 @@
 package main
 
 import (
-	"my_app/env"
-	"my_app/internal/configmanger"
+	"my_app/internal/config"
 	"my_app/internal/db"
 	"my_app/internal/server"
 	"my_app/internal/utils"
@@ -10,8 +9,7 @@ import (
 )
 
 func main() {
-	env.LoadEnv()
-	configmanger.LoadCofnig()
+	config.LoadAllConfig()
 	db.InitDB()
 	db.InitRedis()
 	utils.MirateTable()
