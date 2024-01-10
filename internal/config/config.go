@@ -43,6 +43,8 @@ type Test2Conf struct {
 
 func LoadOneConfig(path string, target interface{}) {
 	fmt.Printf("load config %s\n", path)
+	mu.Lock()
+	defer mu.Unlock()
 	full_path := fmt.Sprintf("configs/%s", path)
 	file, err := os.Open(full_path)
 	if err != nil {
