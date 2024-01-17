@@ -8,6 +8,7 @@ import (
 	"time"
 )
 
+// 登录接口
 func ReqLogin(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 	ret = make(utils.Dict)
 
@@ -18,11 +19,9 @@ func ReqLogin(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 		ret["error"] = err.Error()
 		return ret
 	}
-	fmt.Printf("user: %#v\n", user)
 	if user == nil {
 		user = models.CreateUser(name, password)
 	}
-	fmt.Printf("user: %#v\n", user)
 	if ok := ctx.IsOnline(user.ID); ok {
 		startTime := time.Now()
 		ctx.QuitMessage(user.ID)
@@ -37,10 +36,30 @@ func ReqLogin(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 	}
 	ctx.SetOnline(user.ID)
 	ctx.User = user
+
+	LoginLoadData(ctx)
+	LoginCheckData(ctx, ret)
+	LoginRetData(ctx, ret)
+
 	ret["user"] = utils.Dict{
 		"id":   user.ID,
 		"name": user.Name,
 		"coin": user.Coin,
 	}
 	return ret
+}
+
+// 登录加载数据
+func LoginLoadData(ctx *Ctx) {
+	LoginBonusLoadData(ctx)
+}
+
+// 登录检测数据
+func LoginCheckData(ctx *Ctx, ret utils.Dict) {
+	ctx.LoginBonusCtx.LoginCheck(ctx, ret)
+}
+
+// 登录返回数据
+func LoginRetData(ctx *Ctx, ret utils.Dict) {
+	ctx.LoginBonusCtx.GetRet(ret)
 }

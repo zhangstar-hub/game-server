@@ -6,5 +6,5 @@ import (
 )
 
 func MirateTable() {
-	db.DB.AutoMigrate(&models.User{}, &models.Mission{})
+	db.DB.AutoMigrate(&models.User{}, &models.Mission{}, &models.LoginBonus{})
 }

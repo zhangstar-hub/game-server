@@ -24,7 +24,9 @@ type Ctx struct {
 	LastSaveTime   time.Time    // 上一次存档的时间
 	Token          string       // 登录产生的唯一ID
 	ZClient        ZMQInterface // zmq消息发送器
-	User           *models.User
+
+	User          *models.User
+	LoginBonusCtx *LoginBonusCtx
 }
 
 // 玩家退出清理

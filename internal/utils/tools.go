@@ -68,3 +68,10 @@ func GetLocalIP() string {
 func GetPid() int {
 	return int(os.Getpid())
 }
+
+// 合并map
+func MergeMaps(map1, map2 Dict) {
+	for key, value := range map2 {
+		map1[key] = value
+	}
+}
