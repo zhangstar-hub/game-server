@@ -2,7 +2,7 @@ package zmq_client
 
 import (
 	"fmt"
-	"my_app/internal/context"
+	"my_app/internal/src"
 	"my_app/internal/utils"
 )
 
@@ -13,8 +13,8 @@ func ReqTest(data utils.Dict) {
 
 // 把玩家掉线
 func ReqUserExit(data utils.Dict) {
-	context.Users.Range(func(key, value interface{}) bool {
-		v := value.(*context.Ctx)
+	src.Users.Range(func(key, value interface{}) bool {
+		v := value.(*src.Ctx)
 		if v.User != nil && v.User.ID == uint(data["uid"].(float64)) {
 			v.Close()
 			return false

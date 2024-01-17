@@ -1,4 +1,4 @@
-package context
+package src
 
 import (
 	"fmt"
@@ -12,14 +12,19 @@ import (
 // 存储服务器所有玩家
 var Users sync.Map
 
-type Ctx struct {
-	Conn           net.Conn  // tcp 连接
-	Cmd            string    // 当前处理的命令
-	LastActiveTime time.Time // 上一次存活的时间
-	LastSaveTime   time.Time // 上一次存档的时间
-	Token          string    // 登录产生的唯一ID
+type ZMQInterface interface {
+	Send(message map[string]interface{}) (int, error)
+	Recv() ([]byte, error)
+}
 
-	User *models.User
+type Ctx struct {
+	Conn           net.Conn     // tcp 连接
+	Cmd            string       // 当前处理的命令
+	LastActiveTime time.Time    // 上一次存活的时间
+	LastSaveTime   time.Time    // 上一次存档的时间
+	Token          string       // 登录产生的唯一ID
+	ZClient        ZMQInterface // zmq消息发送器
+	User           *models.User
 }
 
 // 玩家退出清理
@@ -57,4 +62,14 @@ func (ctx *Ctx) SetOnline(uid uint) {
 func (ctx *Ctx) SetOffline(uid uint) {
 	key := fmt.Sprintf("user:%d", uid)
 	db.RedisClient.Delete(key)
+}
+
+// 发送退出消息
+func (ctx *Ctx) QuitMessage(uid uint) {
+	ctx.ZClient.Send(map[string]interface{}{
+		"cmd": "ReqUserExit",
+		"data": map[string]interface{}{
+			"uid": uid,
+		},
+	})
 }

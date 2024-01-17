@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"my_app/internal/config"
-	"my_app/internal/context"
 	"my_app/internal/middleware"
 	"my_app/internal/router"
+	"my_app/internal/src"
 	"my_app/internal/utils"
 	"my_app/internal/zmq_client"
 	"net"
@@ -23,20 +23,21 @@ import (
 var listenNewReq bool = true
 
 // 处理请求
-func handleConnection(conn net.Conn, group *sync.WaitGroup) {
+func handleConnection(conn net.Conn, group *sync.WaitGroup, zClient *zmq_client.ZMQClient) {
 	defer group.Done()
 
 	fmt.Println("Client connected:", conn.RemoteAddr())
 
 	token := uuid.NewString()
-	ctx := &context.Ctx{
+	ctx := &src.Ctx{
 		Conn:           conn,
 		LastActiveTime: time.Now(),
 		LastSaveTime:   time.Now(),
 		Token:          token,
+		ZClient:        zClient,
 	}
 	defer ctx.Close()
-	context.Users.Store(token, ctx)
+	src.Users.Store(token, ctx)
 
 	for {
 		CanRequest()
@@ -124,7 +125,7 @@ func sendData(conn net.Conn, data map[string]interface{}) (err error) {
 }
 
 // 执行函数入口
-func RequestFunction(ctx *context.Ctx, data utils.Dict) utils.Dict {
+func RequestFunction(ctx *src.Ctx, data utils.Dict) utils.Dict {
 	if _, ok := data["cmd"]; !ok {
 		return map[string]interface{}{
 			"error": "invalid command",
@@ -177,6 +178,8 @@ func RequestFunction(ctx *context.Ctx, data utils.Dict) utils.Dict {
 // 监听连接请求
 func HandleServer(tcp *net.TCPListener) {
 	var group sync.WaitGroup
+	zClient := zmq_client.NewZMQClient()
+	go zClient.MessageListener()
 
 	for listenNewReq {
 		conn, err := tcp.Accept()
@@ -185,7 +188,7 @@ func HandleServer(tcp *net.TCPListener) {
 			break
 		}
 		group.Add(1)
-		go handleConnection(conn, &group)
+		go handleConnection(conn, &group, zClient)
 	}
 	group.Wait()
 }
@@ -199,8 +202,8 @@ func ListenSignal(c <-chan os.Signal, listener *net.TCPListener) {
 	fmt.Println("Stop receiving new connections...")
 	<-c
 
-	context.Users.Range(func(key, value interface{}) bool {
-		v := value.(*context.Ctx)
+	src.Users.Range(func(key, value interface{}) bool {
+		v := value.(*src.Ctx)
 		v.Close()
 		return true
 	})
@@ -228,7 +231,6 @@ func StartServer() {
 	go ListenSignal(c, listener)
 	go UserActiveListener()
 	go AutoSave()
-	go zmq_client.MessageListener()
 	HandleServer(listener)
 	fmt.Println("stop server")
 }

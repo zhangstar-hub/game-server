@@ -17,14 +17,12 @@ type ZMQClient struct {
 	client *zmq4.Socket
 }
 
-var ZClient ZMQClient
-
-func InitZMQClient() {
+func NewZMQClient() *ZMQClient {
 	conf := config.GetC()
 	client, _ := zmq4.NewSocket(zmq4.DEALER)
 	client.SetIdentity(fmt.Sprintf("%s:%d", utils.GetLocalIP(), conf.Env.App.Port))
 
-	ZClient = ZMQClient{client: client}
+	zClient := &ZMQClient{client: client}
 	err := client.Connect(ZmqServerAddr)
 	if err != nil {
 		panic(fmt.Sprintf("无法连接中心服务器：%s", ZmqServerAddr))
@@ -33,10 +31,11 @@ func InitZMQClient() {
 	if err != nil {
 		panic("向中心服务器发送消息失败")
 	}
+	return zClient
 }
 
 // 向中心服务器发送数据
-func (z ZMQClient) Send(data map[string]interface{}) (int, error) {
+func (z *ZMQClient) Send(data map[string]interface{}) (int, error) {
 	json, err := json.Marshal(data)
 	if err != nil {
 		return 0, err
@@ -45,15 +44,14 @@ func (z ZMQClient) Send(data map[string]interface{}) (int, error) {
 }
 
 // 从中心服务器接受数据
-func (z ZMQClient) Recv() ([]byte, error) {
+func (z *ZMQClient) Recv() ([]byte, error) {
 	return z.client.RecvBytes(0)
 }
 
 // 数据接口监听
-// 数据接口监听
-func MessageListener() {
+func (z *ZMQClient) MessageListener() {
 	for {
-		message, err := ZClient.Recv()
+		message, err := z.Recv()
 		fmt.Printf("MessageListener message: %v\n", message)
 		if err != nil {
 			fmt.Printf("message recv error %s\n", err)

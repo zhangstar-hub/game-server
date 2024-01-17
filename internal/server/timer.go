@@ -1,7 +1,7 @@
 package server
 
 import (
-	"my_app/internal/context"
+	"my_app/internal/src"
 	"time"
 )
 
@@ -13,9 +13,9 @@ func UserActiveListener() {
 	timeoutLimit := 60 * time.Second
 
 	for range ticker.C {
-		var canDeleteUser []*context.Ctx
-		context.Users.Range(func(key, value interface{}) bool {
-			v := value.(*context.Ctx)
+		var canDeleteUser []*src.Ctx
+		src.Users.Range(func(key, value interface{}) bool {
+			v := value.(*src.Ctx)
 			if time.Since(v.LastActiveTime) > timeoutLimit {
 				canDeleteUser = append(canDeleteUser, v)
 			}
@@ -35,8 +35,8 @@ func AutoSave() {
 	defer ticker.Stop()
 
 	for range ticker.C {
-		context.Users.Range(func(key, value interface{}) bool {
-			v := value.(*context.Ctx)
+		src.Users.Range(func(key, value interface{}) bool {
+			v := value.(*src.Ctx)
 			if time.Since(v.LastSaveTime) > saveTime {
 				v.SaveAll()
 			}
