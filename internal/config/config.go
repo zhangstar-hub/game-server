@@ -8,9 +8,9 @@ import (
 )
 
 type Config struct {
-	Env   EnvConf
-	Test  TestConf
-	Test2 Test2Conf
+	Env        EnvConf
+	Test       TestConf
+	LoginBonus LoginBonusCFG
 }
 
 var config *Config
@@ -37,10 +37,6 @@ type TestConf struct {
 	A int
 }
 
-type Test2Conf struct {
-	A int
-}
-
 func LoadOneConfig(path string, target interface{}) {
 	fmt.Printf("load config %s\n", path)
 	mu.Lock()
@@ -59,7 +55,7 @@ func LoadAllConfig() {
 	config = &Config{}
 	LoadOneConfig("env.json", &config.Env)
 	LoadOneConfig("test.json", &config.Test)
-	LoadOneConfig("test2.json", &config.Test2)
+	LoadOneConfig("login_bonus.json", &config.LoginBonus)
 }
 
 // 获取配置接口

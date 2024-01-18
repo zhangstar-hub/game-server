@@ -17,6 +17,10 @@ type ZMQInterface interface {
 	Recv() ([]byte, error)
 }
 
+type SaveEntry interface {
+	Save() error
+}
+
 type Ctx struct {
 	Conn           net.Conn     // tcp 连接
 	Cmd            string       // 当前处理的命令
@@ -39,12 +43,17 @@ func (ctx *Ctx) Close() {
 	}
 }
 
-// 退出数据保存
-func (ctx *Ctx) SaveAll() {
-	err := ctx.User.Save()
-	if err != nil {
+// 保存一个数据
+func SaveOne(entity SaveEntry) {
+	if err := entity.Save(); err != nil {
 		fmt.Println(err)
 	}
+}
+
+// 保存全部数据
+func (ctx *Ctx) SaveAll() {
+	SaveOne(ctx.User)
+	SaveOne(ctx.LoginBonusCtx)
 }
 
 // 检测玩家是否在线
