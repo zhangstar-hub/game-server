@@ -5,6 +5,7 @@ import (
 	"my_app/internal/db"
 	"my_app/internal/models"
 	"net"
+	"reflect"
 	"sync"
 	"time"
 )
@@ -45,6 +46,9 @@ func (ctx *Ctx) Close() {
 
 // 保存一个数据
 func SaveOne(entity SaveEntry) {
+	if reflect.ValueOf(entity).IsNil() {
+		return
+	}
 	if err := entity.Save(); err != nil {
 		fmt.Println(err)
 	}
