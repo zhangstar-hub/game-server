@@ -4,13 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"my_app/internal/config"
+	"my_app/internal/logger"
 	"my_app/internal/utils"
 
 	"github.com/pebbe/zmq4"
-)
-
-const (
-	ZmqServerAddr = "tcp://127.0.0.1:5555"
 )
 
 type ZMQClient struct {
@@ -23,9 +20,9 @@ func NewZMQClient() *ZMQClient {
 	client.SetIdentity(fmt.Sprintf("%s:%d", utils.GetLocalIP(), conf.Env.App.Port))
 
 	zClient := &ZMQClient{client: client}
-	err := client.Connect(ZmqServerAddr)
+	err := client.Connect(conf.Env.ZMQCenter.Address)
 	if err != nil {
-		panic(fmt.Sprintf("无法连接中心服务器：%s", ZmqServerAddr))
+		panic(fmt.Sprintf("无法连接中心服务器：%s", conf.Env.ZMQCenter.Address))
 	}
 	_, err = client.Send("first_message", 0)
 	if err != nil {
@@ -52,7 +49,7 @@ func (z *ZMQClient) Recv() ([]byte, error) {
 func (z *ZMQClient) MessageListener() {
 	for {
 		message, err := z.Recv()
-		fmt.Printf("MessageListener message: %v\n", message)
+		fmt.Printf("MessageListener message: %s\n", message)
 		if err != nil {
 			fmt.Printf("message recv error %s\n", err)
 			continue
@@ -78,5 +75,8 @@ func (z *ZMQClient) MessageListener() {
 		}
 		data := messageMap["data"].(utils.Dict)
 		ZMQRouters[cmd](data)
+
+		msg := fmt.Sprintf("ClientRecv message:%s", message)
+		logger.ZMQInfo(msg)
 	}
 }

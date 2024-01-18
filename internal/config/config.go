@@ -7,14 +7,19 @@ import (
 	"sync"
 )
 
+// 配置文件全局遍历
+var config *Config
+
+// 配置文件于存储遍历的映射
+var ConfigMap map[string]interface{}
+
+// 配置文件锁
+var mu sync.RWMutex
+
 type Config struct {
 	Env        EnvConf
-	Test       TestConf
 	LoginBonus LoginBonusCFG
 }
-
-var config *Config
-var mu sync.RWMutex
 
 type EnvConf struct {
 	App struct {
@@ -31,31 +36,41 @@ type EnvConf struct {
 		Address string
 		DB      int
 	}
+	ZMQCenter struct {
+		Address string
+	}
 }
 
-type TestConf struct {
-	A int
-}
-
-func LoadOneConfig(path string, target interface{}) {
+// 从一个文件中加载配置
+func LoadOneConfig(path string, target interface{}, wg *sync.WaitGroup) {
 	fmt.Printf("load config %s\n", path)
-	mu.Lock()
-	defer mu.Unlock()
-	full_path := fmt.Sprintf("configs/%s", path)
-	file, err := os.Open(full_path)
-	if err != nil {
-		panic("Could not open " + full_path)
-	}
-	if err := json.NewDecoder(file).Decode(target); err != nil {
-		panic("Could not decode " + full_path)
-	}
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+		full_path := fmt.Sprintf("configs/%s", path)
+		file, err := os.Open(full_path)
+		if err != nil {
+			panic("Could not open " + full_path)
+		}
+		defer file.Close()
+		mu.Lock()
+		defer mu.Unlock()
+		if err := json.NewDecoder(file).Decode(target); err != nil {
+			panic("Could not decode " + full_path)
+		}
+	}()
+
+	ConfigMap[path] = target
 }
 
+// 加载所有配置文件
 func LoadAllConfig() {
 	config = &Config{}
-	LoadOneConfig("env.json", &config.Env)
-	LoadOneConfig("test.json", &config.Test)
-	LoadOneConfig("login_bonus.json", &config.LoginBonus)
+	var wg sync.WaitGroup
+	LoadOneConfig("env.json", &config.Env, &wg)
+	LoadOneConfig("login_bonus.json", &config.LoginBonus, &wg)
+	wg.Wait()
 }
 
 // 获取配置接口
@@ -63,4 +78,8 @@ func GetC() *Config {
 	mu.RLock()
 	defer mu.RUnlock()
 	return config
+}
+
+func init() {
+	ConfigMap = make(map[string]interface{})
 }

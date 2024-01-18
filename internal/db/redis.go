@@ -179,6 +179,7 @@ func (r *Redis) Exists(key string) (int64, error) {
 	return r.client.Exists(ctx, key).Result()
 }
 
+// 关闭redis连接
 func (r *Redis) Close() error {
 	return r.client.Close()
 }

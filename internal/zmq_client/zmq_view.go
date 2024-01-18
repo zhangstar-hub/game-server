@@ -2,8 +2,10 @@ package zmq_client
 
 import (
 	"fmt"
+	"my_app/internal/config"
 	"my_app/internal/src"
 	"my_app/internal/utils"
+	"sync"
 )
 
 func ReqTest(data utils.Dict) {
@@ -21,4 +23,18 @@ func ReqUserExit(data utils.Dict) {
 		}
 		return true
 	})
+}
+
+// 刷新配置
+func ReqFlushConfig(data utils.Dict) {
+	configName := data["configName"].(string)
+	if configName == "ALL" {
+		config.LoadAllConfig()
+	} else {
+		if _, ok := config.ConfigMap[configName]; ok {
+			var wg sync.WaitGroup
+			config.LoadOneConfig(configName, config.ConfigMap[configName], &wg)
+			wg.Wait()
+		}
+	}
 }

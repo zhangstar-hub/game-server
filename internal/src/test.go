@@ -1,12 +1,14 @@
 package src
 
 import (
+	"my_app/internal/config"
 	"my_app/internal/utils"
 )
 
 func ReqTest(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 	ret = make(utils.Dict)
 	ret["test"] = "test"
+	ret["config"] = config.GetC()
 	return ret
 }
 

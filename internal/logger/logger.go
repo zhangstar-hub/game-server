@@ -6,9 +6,14 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-var Logger *zap.Logger
+type Logger struct {
+	AppLogger *zap.Logger
+	ZMQLogger *zap.Logger
+}
 
-func init() {
+var Loggers *Logger
+
+func NewLogger(filename string) *zap.Logger {
 	// 配置 zap
 	config := zap.NewProductionConfig()
 	config.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
@@ -16,11 +21,11 @@ func init() {
 
 	// 设置日志文件滚动
 	logFile := &lumberjack.Logger{
-		Filename:   "logs/app.log", // 日志文件路径
-		MaxSize:    500,            // 每个日志文件的最大尺寸，单位MB
-		MaxBackups: 3,              // 保留的旧日志文件的最大个数
-		MaxAge:     3,              // 保留的旧日志文件的最大天数
-		Compress:   true,           // 是否压缩旧日志文件
+		Filename:   filename, // 日志文件路径
+		MaxSize:    500,      // 每个日志文件的最大尺寸，单位MB
+		MaxBackups: 3,        // 保留的旧日志文件的最大个数
+		MaxAge:     3,        // 保留的旧日志文件的最大天数
+		Compress:   true,     // 是否压缩旧日志文件
 	}
 	// 设置日志输出为文件
 	core := zapcore.NewCore(
@@ -30,21 +35,47 @@ func init() {
 	)
 
 	// 创建 logger
-	Logger = zap.New(core)
+	return zap.New(core)
 }
 
+func init() {
+	Loggers = &Logger{}
+	Loggers.AppLogger = NewLogger("logs/app.log")
+	Loggers.ZMQLogger = NewLogger("logs/zmq.log")
+}
+
+// ----------------------------------------------------------------
+// 项目日志
 func Debug(msg string) {
-	Logger.Info(msg)
+	Loggers.AppLogger.Debug(msg)
 }
 
 func Info(msg string) {
-	Logger.Info(msg)
+	Loggers.AppLogger.Info(msg)
 }
 
 func Error(msg string) {
-	Logger.Error(msg)
+	Loggers.AppLogger.Error(msg)
 }
 
 func Fatal(msg string) {
-	Logger.Fatal(msg)
+	Loggers.AppLogger.Fatal(msg)
+}
+
+// ----------------------------------------------------------------
+// ZMQ日志
+func ZMQDebug(msg string) {
+	Loggers.ZMQLogger.Debug(msg)
+}
+
+func ZMQInfo(msg string) {
+	Loggers.ZMQLogger.Info(msg)
+}
+
+func ZMQError(msg string) {
+	Loggers.ZMQLogger.Error(msg)
+}
+
+func ZMQFatal(msg string) {
+	Loggers.ZMQLogger.Fatal(msg)
 }
