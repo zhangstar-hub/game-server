@@ -16,6 +16,7 @@ type ZMQClient struct {
 	client *zmq4.Socket
 }
 
+// 新建一个ZMQ客户端
 func NewZMQClient() *ZMQClient {
 	client, _ := zmq4.NewSocket(zmq4.DEALER)
 	client.SetIdentity(fmt.Sprintf("%s:%d", utils.GetLocalIP(), 6666))
@@ -44,27 +45,4 @@ func (z *ZMQClient) Send(data map[string]interface{}) (int, error) {
 // 从中心服务器接受数据
 func (z *ZMQClient) Recv() ([]byte, error) {
 	return z.client.RecvBytes(0)
-}
-
-func main() {
-	client := NewZMQClient()
-	// client.Send(map[string]interface{}{
-	// 	"cmd": "ReqFlushConfig",
-	// 	"data": map[string]interface{}{
-	// 		"configName": "ALL",
-	// 	},
-	// })
-
-	client.Send(map[string]interface{}{
-		"cmd": "ReqFlushConfig",
-		"data": map[string]interface{}{
-			"configName": "login_bonus.json",
-		},
-	})
-
-	ret, err := client.Recv()
-	if err != nil {
-		fmt.Printf("err: %v\n", err)
-	}
-	fmt.Printf("ret: %s\n", ret)
 }
