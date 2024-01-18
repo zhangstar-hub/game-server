@@ -51,5 +51,4 @@ func CanRequest() {
 
 func init() {
 	go TokenBucketLimit()
-	go SlidingWindowLimit()
 }
