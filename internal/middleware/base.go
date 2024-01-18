@@ -18,4 +18,5 @@ func RegisterMiddleware(middleware Middleware) {
 
 func init() {
 	RegisterMiddleware(&LoginMiddleware{})
+	RegisterMiddleware(&LogMiddleware{})
 }

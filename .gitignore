@@ -1,0 +1,13 @@
+/logs
+
+# 忽略 macOS 系统产生的文件
+.DS_Store
+
+# 忽略 Windows 系统产生的文件
+Thumbs.db
+Desktop.ini
+
+# 忽略编辑器或 IDE 产生的文件和目录
+.vscode/
+.idea/
+
