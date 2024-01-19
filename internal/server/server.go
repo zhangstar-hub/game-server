@@ -208,7 +208,6 @@ func ListenSignal(c <-chan os.Signal, listener *net.TCPListener) {
 		return true
 	})
 	fmt.Println("Exiting ...")
-	os.Exit(0)
 }
 
 // 启动服务服务
@@ -226,6 +225,7 @@ func StartServer() {
 		return
 	}
 	defer listener.Close()
+
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go ListenSignal(c, listener)
