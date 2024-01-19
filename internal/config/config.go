@@ -10,12 +10,13 @@ import (
 // 配置文件全局遍历
 var config *Config
 
-// 配置文件于存储遍历的映射
+// 配置文件与存储变量的映射
 var ConfigMap map[string]interface{}
 
 // 配置文件锁
 var mu sync.RWMutex
 
+// 总配置文件
 type Config struct {
 	Env        EnvConf
 	LoginBonus LoginBonusCFG

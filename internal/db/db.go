@@ -32,3 +32,7 @@ func InitDB() {
 	sqlDB.SetConnMaxLifetime(5 * time.Minute)
 	println("initialized database")
 }
+
+func MirateTable(tables ...interface{}) {
+	DB.AutoMigrate(tables...)
+}
