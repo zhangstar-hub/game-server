@@ -1,4 +1,5 @@
 /logs
+/pids
 
 # 忽略 macOS 系统产生的文件
 .DS_Store

@@ -14,7 +14,7 @@ func main() {
 	var progress_id int
 	flag.IntVar(&progress_id, "pid", 1, "进程编号")
 	flag.Parse()
-	defer os.Remove(fmt.Sprintf("logs/app_%d.pid", progress_id))
+	defer os.Remove(fmt.Sprintf("pids/app_%d.pid", progress_id))
 
 	config.LoadAllConfig()
 	db.InitDB()
