@@ -30,6 +30,7 @@ func InitDB() {
 	sqlDB.SetMaxOpenConns(100)
 	sqlDB.SetMaxIdleConns(10)
 	sqlDB.SetConnMaxLifetime(5 * time.Minute)
+	MirateTable()
 	println("initialized database")
 }
 
