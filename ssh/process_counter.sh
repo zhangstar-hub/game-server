@@ -1,5 +1,5 @@
 #!/bin/bash
-counter_file="logs/pid_count.txt"
+counter_file="pids/pid_count.txt"
 
 # 检查计数器文件是否存在，不存在则创建
 if [ ! -e "$counter_file" ]; then

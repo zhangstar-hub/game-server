@@ -54,7 +54,7 @@ shutdown() {
 }
 
 restart() {
-  if lsof -i :"$port" | grep LISTEN; then
+  if nc -z -w 1 127.0.0.1 "$port"; then
     stop
   fi
   start
