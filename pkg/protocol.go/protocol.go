@@ -1,4 +1,4 @@
-package main
+package protocol
 
 import (
 	"crypto/aes"
@@ -10,7 +10,7 @@ import (
 
 var KEY = []byte("AES256Key-32Characters1234567890")
 
-func encrypt(data []byte) ([]byte, error) {
+func Encrypt(data []byte) ([]byte, error) {
 	// 创建 AES 分组
 	block, err := aes.NewCipher(KEY)
 	if err != nil {
@@ -34,7 +34,7 @@ func encrypt(data []byte) ([]byte, error) {
 	return ciphertext, nil
 }
 
-func decrypt(ciphertext []byte) ([]byte, error) {
+func Decrypt(ciphertext []byte) ([]byte, error) {
 	// 创建 AES 分组
 	block, err := aes.NewCipher(KEY)
 	if err != nil {

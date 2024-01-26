@@ -2,9 +2,8 @@ package main
 
 import (
 	"fmt"
-	"my_app/internal/utils"
+	"reflect"
 	"strings"
-	"time"
 )
 
 func AddString(a, b string) {
@@ -22,6 +21,18 @@ func BuildString(a, b string) {
 	_ = a + b
 }
 
+func interfaceIsNil(x interface{}) {
+	if x == nil {
+		fmt.Println("empty interface")
+		return
+	}
+	fmt.Println("non-empty interface")
+}
+
 func main() {
-	fmt.Printf("utils.MondayFlushTime(): %v\n", utils.MondayFlushTime().Add(time.Second))
+	x := 1
+	v := reflect.ValueOf(&x)
+	fmt.Printf("v.Interface(): %v\n", v.Elem().CanSet())
+	v.Elem().SetInt(2)
+	fmt.Printf("x: %v\n", x)
 }

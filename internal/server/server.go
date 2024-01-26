@@ -10,6 +10,8 @@ import (
 	"my_app/internal/src"
 	"my_app/internal/utils"
 	"my_app/internal/zmq_client"
+	"my_app/pkg/protocol.go"
+	"my_app/pkg/throttle"
 	"net"
 	"os"
 	"os/signal"
@@ -21,6 +23,26 @@ import (
 )
 
 var listenNewReq bool = true
+
+func RequestWait() bool {
+	trottleList := []throttle.RequestTrottle{
+		throttle.NewSlidingWindowThrottle(),
+		throttle.NewTokenBucketThrottle(),
+	}
+
+	ticker := time.Tick(10 * time.Second)
+	for _, v := range trottleList {
+		select {
+		case <-ticker:
+			return true
+		default:
+			if !v.CanRequest() {
+				time.Sleep(1 * time.Second)
+			}
+		}
+	}
+	return true
+}
 
 // 处理请求
 func handleConnection(conn net.Conn, group *sync.WaitGroup, zClient *zmq_client.ZMQClient) {
@@ -40,25 +62,16 @@ func handleConnection(conn net.Conn, group *sync.WaitGroup, zClient *zmq_client.
 	src.Users.Store(token, ctx)
 
 	for {
-		CanRequest()
-		message, err, de_err := readData(conn)
+		RequestWait()
+		data, err, de_err := readData(conn)
 		if err != nil {
 			fmt.Printf("Error reading data: %v, %T\n", err, err)
 			return
 		}
-
 		if de_err != nil {
 			fmt.Printf("Error decoding data: %v, %T\n", de_err, de_err)
 			continue
 		}
-
-		// 解析 JSON 数据
-		var data map[string]interface{}
-		if err := json.Unmarshal(message, &data); err != nil {
-			fmt.Println("Error decoding JSON:", err)
-			continue
-		}
-
 		ret := RequestFunction(ctx, data)
 		err = sendData(conn, ret)
 		if err != nil {
@@ -69,7 +82,7 @@ func handleConnection(conn net.Conn, group *sync.WaitGroup, zClient *zmq_client.
 }
 
 // 读取消息内容
-func readData(conn net.Conn) ([]byte, error, error) {
+func readData(conn net.Conn) (map[string]interface{}, error, error) {
 	lenBuffer := make([]byte, 4)
 	_, err := conn.Read(lenBuffer)
 	if err != nil {
@@ -98,11 +111,16 @@ func readData(conn net.Conn) ([]byte, error, error) {
 	}
 	conn.SetReadDeadline(time.Time{})
 
-	decryptedMessage, err := decrypt(message)
+	decryptedMessage, err := protocol.Decrypt(message)
 	if err != nil {
 		return nil, nil, err
 	}
-	return decryptedMessage, nil, nil
+	// 解析 JSON 数据
+	var data map[string]interface{}
+	if err := json.Unmarshal(decryptedMessage, &data); err != nil {
+		return nil, nil, err
+	}
+	return data, nil, nil
 }
 
 // 发送数据
@@ -111,7 +129,7 @@ func sendData(conn net.Conn, data map[string]interface{}) (err error) {
 	if err != nil {
 		return err
 	}
-	encryptedMessage, err := Encrypt(jsonData)
+	encryptedMessage, err := protocol.Encrypt(jsonData)
 	if err != nil {
 		return err
 	}

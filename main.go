@@ -18,5 +18,6 @@ func main() {
 	config.LoadAllConfig()
 	db.InitDB()
 	db.InitRedis()
+	// ws_server.StartServer()
 	server.StartServer()
 }

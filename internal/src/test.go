@@ -9,6 +9,8 @@ func ReqTest(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 	ret = make(utils.Dict)
 	ret["test"] = "test"
 	ret["config"] = config.GetC()
+	ret["params"] = utils.Dict{}
+	utils.MergeMaps(ret["params"].(utils.Dict), data)
 	return ret
 }
 

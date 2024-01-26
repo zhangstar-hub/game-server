@@ -2,9 +2,9 @@ package src
 
 import (
 	"fmt"
+	"io"
 	"my_app/internal/db"
 	"my_app/internal/models"
-	"net"
 	"reflect"
 	"sync"
 	"time"
@@ -23,7 +23,7 @@ type SaveEntry interface {
 }
 
 type Ctx struct {
-	Conn           net.Conn     // tcp 连接
+	Conn           io.Closer    // tcp 连接
 	Cmd            string       // 当前处理的命令
 	LastActiveTime time.Time    // 上一次存活的时间
 	LastSaveTime   time.Time    // 上一次存档的时间

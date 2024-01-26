@@ -4,44 +4,10 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"my_app/pkg/protocol.go"
 	"net"
 	"time"
 )
-
-func LongJsonTestData1() map[string]interface{} {
-	data := make(map[string]interface{})
-	data["id"] = 1234567890
-	data["name"] = "<NAME>"
-	data["age"] = 25
-	data["address"] = "123 Main St."
-	data["city"] = "San Francisco"
-	data["state"] = "CA"
-	data["zip"] = "94107"
-	data["phone"] = "123-456-7890"
-	data["email"] = "<EMAIL>"
-	data["url"] = "http://www.example.com"
-	data["ip"] = "127.0.0.1"
-	return data
-}
-
-func LongJsonTestData2() map[string]interface{} {
-	data := make(map[string]interface{})
-	data["id"] = 1234567890
-	data["name"] = "<NAME>"
-	data["age"] = 25
-	data["address"] = "123 Main St."
-	data["city"] = "San Francisco"
-	data["state"] = "CA"
-	data["zip"] = "94107"
-	data["phone"] = "123-456-7890"
-	data["email"] = "<EMAIL>"
-	data["url"] = "http://www.example.com"
-	data["ip"] = "127.0.0.1"
-	for i := 0; i < 1000000; i++ {
-		data[fmt.Sprintf("key%d", i)] = i
-	}
-	return data
-}
 
 // 读取消息内容
 func readData(conn net.Conn) ([]byte, error) {
@@ -73,7 +39,7 @@ func readData(conn net.Conn) ([]byte, error) {
 	}
 	conn.SetReadDeadline(time.Time{})
 
-	decryptedMessage, err := decrypt(message)
+	decryptedMessage, err := protocol.Decrypt(message)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +52,7 @@ func sendData(conn net.Conn, data map[string]interface{}) (err error) {
 	if err != nil {
 		return err
 	}
-	encryptedMessage, err := encrypt(jsonData)
+	encryptedMessage, err := protocol.Encrypt(jsonData)
 	if err != nil {
 		return err
 	}
@@ -121,9 +87,6 @@ func SendTest() {
 				"password": "admin",
 			},
 		}
-
-	case 3:
-		data = LongJsonTestData2()
 	}
 	err = sendData(conn, data)
 	if err != nil {
