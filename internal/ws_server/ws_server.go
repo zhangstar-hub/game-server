@@ -1,7 +1,6 @@
 package ws_server
 
 import (
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"my_app/internal/config"
@@ -31,15 +30,13 @@ var upgrader = websocket.Upgrader{
 }
 
 type WSServerConn struct {
-	buffer      []byte                    // 读取到的数据
 	conn        *websocket.Conn           // ws 连接
 	trottleList []throttle.RequestTrottle // 限流器
 }
 
 func NewWSServerConn(conn *websocket.Conn) *WSServerConn {
 	return &WSServerConn{
-		buffer: make([]byte, 0),
-		conn:   conn,
+		conn: conn,
 		trottleList: []throttle.RequestTrottle{
 			throttle.NewTokenBucketThrottle(),
 			throttle.NewSlidingWindowThrottle(),
@@ -49,22 +46,11 @@ func NewWSServerConn(conn *websocket.Conn) *WSServerConn {
 
 // 接受数据
 func (wsConn *WSServerConn) readData() (map[string]interface{}, error, error) {
-	var offset uint32 = 4
-	_, p, err := wsConn.conn.ReadMessage()
+	_, buffer, err := wsConn.conn.ReadMessage()
 	if err != nil {
-		fmt.Printf("err: %v", err)
 		return nil, err, nil
 	}
-	wsConn.buffer = append(wsConn.buffer, p...)
-	if uint32(len(wsConn.buffer)) < offset {
-		return nil, nil, nil
-	}
-	messageLength := binary.BigEndian.Uint32(wsConn.buffer[:offset])
-	if messageLength+offset < uint32(len(wsConn.buffer)) {
-		return nil, nil, nil
-	}
-	decryptedMessage, err := protocol.Decrypt(wsConn.buffer[offset:])
-	wsConn.buffer = wsConn.buffer[messageLength+offset:]
+	decryptedMessage, err := protocol.Decrypt(buffer)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -85,11 +71,7 @@ func (wsConn *WSServerConn) sendData(data map[string]interface{}) error {
 	if err != nil {
 		return err
 	}
-
-	msgLength := make([]byte, 4)
-	binary.BigEndian.PutUint32(msgLength, uint32(len(encryptedMessage)))
-	message := append(msgLength, encryptedMessage...)
-	err = wsConn.conn.WriteMessage(websocket.BinaryMessage, message)
+	err = wsConn.conn.WriteMessage(websocket.BinaryMessage, encryptedMessage)
 	if err != nil {
 		return err
 	}

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"my_app/pkg/protocol.go"
@@ -10,8 +9,7 @@ import (
 )
 
 type WebSocketClient struct {
-	buffer []byte // 读取到的数据
-	conn   *websocket.Conn
+	conn *websocket.Conn
 }
 
 func NewWebSocketClient(url string) (*WebSocketClient, error) {
@@ -30,23 +28,11 @@ func (client *WebSocketClient) Close() error {
 
 // 接受数据
 func (wsConn *WebSocketClient) readData() (map[string]interface{}, error, error) {
-	var offset uint32 = 4
-	_, p, err := wsConn.conn.ReadMessage()
+	_, buffer, err := wsConn.conn.ReadMessage()
 	if err != nil {
 		return nil, err, nil
 	}
-	wsConn.buffer = append(wsConn.buffer, p...)
-
-	if uint32(len(wsConn.buffer)) < offset {
-		return nil, nil, nil
-	}
-	messageLength := binary.BigEndian.Uint32(wsConn.buffer[:offset])
-	if messageLength+offset < uint32(len(wsConn.buffer)) {
-		return nil, nil, nil
-	}
-
-	decryptedMessage, err := protocol.Decrypt(wsConn.buffer[offset:])
-	wsConn.buffer = wsConn.buffer[messageLength+offset:]
+	decryptedMessage, err := protocol.Decrypt(buffer)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -67,11 +53,7 @@ func (wsConn *WebSocketClient) sendData(data map[string]interface{}) error {
 	if err != nil {
 		return err
 	}
-
-	msgLength := make([]byte, 4)
-	binary.BigEndian.PutUint32(msgLength, uint32(len(encryptedMessage)))
-	message := append(msgLength, encryptedMessage...)
-	err = wsConn.conn.WriteMessage(websocket.BinaryMessage, message)
+	err = wsConn.conn.WriteMessage(websocket.BinaryMessage, encryptedMessage)
 	if err != nil {
 		return err
 	}
@@ -110,6 +92,9 @@ func main() {
 					"test": "test",
 				},
 			}
+			for i := 0; i < 10000; i++ {
+				data["data"].(map[string]interface{})[string(i)] = i
+			}
 		case 3:
 			d := map[string]interface{}{
 				"coin": 1,
@@ -140,6 +125,6 @@ func main() {
 			fmt.Printf("Error decoding data: %v, %T\n", de_err, de_err)
 			continue
 		}
-		fmt.Printf("ret: %s\n", ret)
+		fmt.Printf("ret: %+v\n", ret)
 	}
 }
