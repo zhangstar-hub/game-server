@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"my_app/pkg/protocol.go"
 
 	"github.com/gorilla/websocket"
 )
@@ -28,16 +27,16 @@ func (client *WebSocketClient) Close() error {
 
 // 接受数据
 func (wsConn *WebSocketClient) readData() (map[string]interface{}, error, error) {
-	_, buffer, err := wsConn.conn.ReadMessage()
+	_, message, err := wsConn.conn.ReadMessage()
 	if err != nil {
 		return nil, err, nil
 	}
-	decryptedMessage, err := protocol.Decrypt(buffer)
-	if err != nil {
-		return nil, nil, err
-	}
+	// message, err = protocol.Decrypt(message)
+	// if err != nil {
+	// 	return nil, nil, err
+	// }
 	var data map[string]interface{}
-	if err := json.Unmarshal(decryptedMessage, &data); err != nil {
+	if err := json.Unmarshal(message, &data); err != nil {
 		return nil, nil, err
 	}
 	return data, nil, nil
@@ -45,15 +44,15 @@ func (wsConn *WebSocketClient) readData() (map[string]interface{}, error, error)
 
 // 发送数据
 func (wsConn *WebSocketClient) sendData(data map[string]interface{}) error {
-	jsonData, err := json.Marshal(data)
+	message, err := json.Marshal(data)
 	if err != nil {
 		return err
 	}
-	encryptedMessage, err := protocol.Encrypt(jsonData)
-	if err != nil {
-		return err
-	}
-	err = wsConn.conn.WriteMessage(websocket.BinaryMessage, encryptedMessage)
+	// message, err = protocol.Encrypt(message)
+	// if err != nil {
+	// 	return err
+	// }
+	err = wsConn.conn.WriteMessage(websocket.TextMessage, message)
 	if err != nil {
 		return err
 	}
