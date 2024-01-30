@@ -11,7 +11,7 @@ type LoginMiddleware struct{}
 
 // 不需要登录就可以接受的请求
 var NoLoingReqList = []string{
-	"ReqLogin",
+	"ReqLogin", "ReqKeepAlive",
 }
 
 func (m *LoginMiddleware) BeforeHandle(ctx *src.Ctx, data utils.Dict) utils.Dict {
