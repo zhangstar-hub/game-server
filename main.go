@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"my_app/internal/config"
 	"my_app/internal/db"
+	"my_app/internal/models"
 	"my_app/internal/ws_server"
 	"os"
 )
@@ -18,6 +19,7 @@ func main() {
 	config.LoadAllConfig()
 	db.InitDB()
 	db.InitRedis()
+	models.MirateTable()
 	ws_server.StartServer()
 	// server.StartServer()
 }

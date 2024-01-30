@@ -60,7 +60,7 @@ func (wsConn *WebSocketClient) sendData(data map[string]interface{}) error {
 }
 
 func main() {
-	serverURL := "ws://localhost:8080/ws"
+	serverURL := "ws://localhost:8080/"
 
 	// 创建 WebSocket 客户端
 	client, err := NewWebSocketClient(serverURL)

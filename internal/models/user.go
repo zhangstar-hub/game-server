@@ -16,6 +16,8 @@ type User struct {
 	FirstLogin time.Time
 	LastLogin  time.Time
 	Coin       uint64
+	Avatar     string
+	RoomID     uint16
 }
 
 // 是否是新用户
@@ -56,6 +58,8 @@ func CreateUser(name, password string) *User {
 		Password:   string(hashedPassword),
 		FirstLogin: time.Now(),
 		LastLogin:  time.Now(),
+		Avatar:     "1",
+		RoomID:     0,
 	}
 	fmt.Printf("user: %#v\n", user)
 	db.DB.Create(user)

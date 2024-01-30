@@ -11,7 +11,7 @@ import (
 // 登录接口
 func ReqLogin(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 	ret = make(utils.Dict)
-
+	fmt.Printf("data: %v\n", data)
 	name := strings.TrimSpace(data["name"].(string))
 	password := strings.TrimSpace(data["password"].(string))
 	user, err := models.GetUserByName(name, password)
@@ -42,9 +42,10 @@ func ReqLogin(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 	LoginRetData(ctx, ret)
 
 	ret["user"] = utils.Dict{
-		"id":   user.ID,
-		"name": user.Name,
-		"coin": user.Coin,
+		"id":     user.ID,
+		"name":   user.Name,
+		"coin":   user.Coin,
+		"avatar": user.Avatar,
 	}
 	return ret
 }

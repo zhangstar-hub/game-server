@@ -121,6 +121,7 @@ func handleConnections(zClient *zmq_client.ZMQClient, group *sync.WaitGroup) fun
 		for {
 			wsConn.RequestWait()
 			data, err, de_err := wsConn.readData()
+			fmt.Printf("data: %v\n", data)
 			if err != nil {
 				fmt.Printf("Error reading data: %v, %T\n", err, err)
 				return
@@ -215,7 +216,7 @@ func StartServer() {
 	go zClient.MessageListener()
 
 	conf := config.GetC()
-	http.HandleFunc("/ws", handleConnections(zClient, &group))
+	http.HandleFunc("/", handleConnections(zClient, &group))
 	server := &http.Server{Addr: fmt.Sprintf("%s:%d", conf.Env.App.Host, conf.Env.App.Port)}
 
 	c := make(chan os.Signal, 1)
