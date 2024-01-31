@@ -21,12 +21,11 @@ func NewWebSocketClient(url string) (*WebSocketClient, error) {
 }
 
 func (client *WebSocketClient) Close() error {
-	fmt.Printf("close")
 	return client.conn.Close()
 }
 
 // 接受数据
-func (wsConn *WebSocketClient) readData() (map[string]interface{}, error, error) {
+func (wsConn *WebSocketClient) ReadData() (map[string]interface{}, error, error) {
 	_, message, err := wsConn.conn.ReadMessage()
 	if err != nil {
 		return nil, err, nil
@@ -43,7 +42,7 @@ func (wsConn *WebSocketClient) readData() (map[string]interface{}, error, error)
 }
 
 // 发送数据
-func (wsConn *WebSocketClient) sendData(data map[string]interface{}) error {
+func (wsConn *WebSocketClient) SendData(data map[string]interface{}) error {
 	message, err := json.Marshal(data)
 	if err != nil {
 		return err
@@ -59,10 +58,9 @@ func (wsConn *WebSocketClient) sendData(data map[string]interface{}) error {
 	return nil
 }
 
-func main() {
-	serverURL := "ws://localhost:8080/"
-
+func SendTest() {
 	// 创建 WebSocket 客户端
+	serverURL := "ws://localhost:8080/"
 	client, err := NewWebSocketClient(serverURL)
 	if err != nil {
 		fmt.Println("Error creating WebSocket client:", err)
@@ -70,60 +68,95 @@ func main() {
 	}
 	defer client.Close()
 
-	var n int
-	for {
-		fmt.Println("please input your choice:")
-		fmt.Scanln(&n)
-		var data map[string]interface{}
-		switch n {
-		case 1:
-			data = map[string]interface{}{
-				"cmd": "ReqLogin",
-				"data": map[string]interface{}{
-					"name":     "admin",
-					"password": "admin",
-				},
-			}
-		case 2:
-			data = map[string]interface{}{
-				"cmd": "ReqTest",
-				"data": map[string]interface{}{
-					"test": "test",
-				},
-			}
-			for i := 0; i < 10000; i++ {
-				data["data"].(map[string]interface{})[string(i)] = i
-			}
-		case 3:
-			d := map[string]interface{}{
-				"coin": 1,
-			}
-			data = map[string]interface{}{
-				"cmd":  "ReqAddCoin",
-				"data": d,
-			}
-		case 4:
-			data = map[string]interface{}{
-				"cmd":  "ReqZmqTest",
-				"data": map[string]interface{}{},
-			}
-		}
-		// 发送 JSON 数据
-		err = client.sendData(data)
-		if err != nil {
-			fmt.Println("Error sending data:", err)
-			return
-		}
+	data := map[string]interface{}{
+		"cmd": "ReqKeepAlive",
+		"data": map[string]interface{}{
+			"name":     "admin",
+			"password": "admin",
+		},
+	}
+	// 发送 JSON 数据
+	err = client.SendData(data)
+	if err != nil {
+		fmt.Println("Error sending data:", err)
+		return
+	}
 
-		ret, err, de_err := client.readData()
-		if err != nil {
-			fmt.Printf("Error reading data: %v, %T\n", err, err)
-			return
-		}
-		if de_err != nil {
-			fmt.Printf("Error decoding data: %v, %T\n", de_err, de_err)
-			continue
-		}
-		fmt.Printf("ret: %+v\n", ret)
+	_, err, de_err := client.ReadData()
+	if err != nil {
+		fmt.Printf("Error reading data: %v, %T\n", err, err)
+		return
+	}
+	if de_err != nil {
+		fmt.Printf("Error decoding data: %v, %T\n", de_err, de_err)
 	}
 }
+
+// func main() {
+// 	serverURL := "ws://localhost:8080/"
+
+// 	// 创建 WebSocket 客户端
+// 	client, err := NewWebSocketClient(serverURL)
+// 	if err != nil {
+// 		fmt.Println("Error creating WebSocket client:", err)
+// 		return
+// 	}
+// 	defer client.Close()
+
+// 	var n int
+// 	for {
+// 		fmt.Println("please input your choice:")
+// 		fmt.Scanln(&n)
+// 		var data map[string]interface{}
+// 		switch n {
+// 		case 1:
+// 			data = map[string]interface{}{
+// 				"cmd": "ReqLogin",
+// 				"data": map[string]interface{}{
+// 					"name":     "admin",
+// 					"password": "admin",
+// 				},
+// 			}
+// 		case 2:
+// 			data = map[string]interface{}{
+// 				"cmd": "ReqTest",
+// 				"data": map[string]interface{}{
+// 					"test": "test",
+// 				},
+// 			}
+// 			for i := 0; i < 10000; i++ {
+// 				data["data"].(map[string]interface{})[string(i)] = i
+// 			}
+// 		case 3:
+// 			d := map[string]interface{}{
+// 				"coin": 1,
+// 			}
+// 			data = map[string]interface{}{
+// 				"cmd":  "ReqAddCoin",
+// 				"data": d,
+// 			}
+// 		case 4:
+// 			data = map[string]interface{}{
+// 				"cmd":  "ReqZmqTest",
+// 				"data": map[string]interface{}{},
+// 			}
+// 		}
+// 		// 发送 JSON 数据
+// 		err = client.SendData(data)
+// 		if err != nil {
+// 			fmt.Println("Error sending data:", err)
+// 			return
+// 		}
+
+// 		ret, err, de_err := client.ReadData()
+// 		if err != nil {
+// 			fmt.Printf("Error reading data: %v, %T\n", err, err)
+// 			return
+// 		}
+// 		if de_err != nil {
+// 			fmt.Printf("Error decoding data: %v, %T\n", de_err, de_err)
+// 			continue
+// 		}
+// 		fmt.Printf("ret: %+v\n", ret)
+// 	}
+// }

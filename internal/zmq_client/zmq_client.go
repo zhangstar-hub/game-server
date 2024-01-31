@@ -6,20 +6,25 @@ import (
 	"my_app/internal/config"
 	"my_app/internal/logger"
 	"my_app/internal/utils"
+	"sync"
 
 	"github.com/pebbe/zmq4"
 )
 
 type ZMQClient struct {
 	client *zmq4.Socket
+	CtxMap *sync.Map
 }
 
-func NewZMQClient() *ZMQClient {
+func NewZMQClient(ctxMap *sync.Map) *ZMQClient {
 	conf := config.GetC()
 	client, _ := zmq4.NewSocket(zmq4.DEALER)
 	client.SetIdentity(fmt.Sprintf("%s:%d", utils.GetLocalIP(), conf.Env.App.Port))
 
-	zClient := &ZMQClient{client: client}
+	zClient := &ZMQClient{
+		client: client,
+		CtxMap: ctxMap,
+	}
 	err := client.Connect(conf.Env.ZMQCenter.Address)
 	if err != nil {
 		panic(fmt.Sprintf("无法连接中心服务器：%s", conf.Env.ZMQCenter.Address))
@@ -74,7 +79,7 @@ func (z *ZMQClient) MessageListener() {
 			continue
 		}
 		data := messageMap["data"].(utils.Dict)
-		ZMQRouters[cmd](data)
+		ZMQRouters[cmd](z, data)
 
 		msg := fmt.Sprintf("ClientRecv message:%s", message)
 		logger.ZMQInfo(msg)

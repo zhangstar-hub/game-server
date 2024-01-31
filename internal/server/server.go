@@ -1,17 +1,11 @@
 package server
 
 import (
-	"encoding/binary"
-	"encoding/json"
+	"errors"
 	"fmt"
 	"my_app/internal/config"
-	"my_app/internal/middleware"
-	"my_app/internal/router"
 	"my_app/internal/src"
-	"my_app/internal/utils"
 	"my_app/internal/zmq_client"
-	"my_app/pkg/protocol.go"
-	"my_app/pkg/throttle"
 	"net"
 	"os"
 	"os/signal"
@@ -22,48 +16,77 @@ import (
 	"github.com/google/uuid"
 )
 
-var listenNewReq bool = true
+type Server struct {
+	CtxMap       *sync.Map             // 上下文集合
+	Listener     net.Listener          // socket监听器
+	ZClient      *zmq_client.ZMQClient // zmq_client
+	Group        *sync.WaitGroup       // 等待所有连接请求完成
+	ListenNewReq bool                  // 是否关闭监听
+	Stop         chan os.Signal        // 服务关闭信号监听
+	CloseFlag    bool                  // 服务关闭标志
+}
 
-func RequestWait() bool {
-	trottleList := []throttle.RequestTrottle{
-		throttle.NewSlidingWindowThrottle(),
-		throttle.NewTokenBucketThrottle(),
+func NewServer() *Server {
+	conf := config.GetC()
+	tcpAddr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", conf.Env.App.Host, conf.Env.App.Port))
+	if err != nil {
+		panic(errors.New(fmt.Sprintf("Error resolving address: %s", err)))
+	}
+	listener, err := net.ListenTCP("tcp", tcpAddr)
+	if err != nil {
+		panic(errors.New(fmt.Sprintf("Error listening: %s", err)))
 	}
 
-	ticker := time.Tick(10 * time.Second)
-	for _, v := range trottleList {
-		select {
-		case <-ticker:
-			return true
-		default:
-			if !v.CanRequest() {
-				time.Sleep(1 * time.Second)
-			}
-		}
+	ctxMap := &sync.Map{}
+	zClient := zmq_client.NewZMQClient(ctxMap)
+	go zClient.MessageListener()
+
+	stopChan := make(chan os.Signal)
+	signal.Notify(stopChan, os.Interrupt, syscall.SIGTERM)
+
+	s := &Server{
+		CtxMap:       ctxMap,
+		Listener:     listener,
+		ZClient:      zClient,
+		Group:        &sync.WaitGroup{},
+		ListenNewReq: true,
+		Stop:         stopChan,
+		CloseFlag:    false,
 	}
-	return true
+	go s.ListenSignal()
+	return s
+}
+
+// 服务退出清理
+func (s *Server) Close() {
+	s.Listener.Close()
+	s.CloseFlag = true
 }
 
 // 处理请求
-func handleConnection(conn net.Conn, group *sync.WaitGroup, zClient *zmq_client.ZMQClient) {
-	defer group.Done()
-
+func (s *Server) handleConnection(conn net.Conn) {
+	defer s.Group.Done()
 	fmt.Println("Client connected:", conn.RemoteAddr())
+
+	sc := NewServerConn(conn)
+	defer sc.Close()
 
 	token := uuid.NewString()
 	ctx := &src.Ctx{
-		Conn:           conn,
+		Conn:           sc,
 		LastActiveTime: time.Now(),
 		LastSaveTime:   time.Now(),
 		Token:          token,
-		ZClient:        zClient,
+		ZClient:        s.ZClient,
 	}
 	defer ctx.Close()
-	src.Users.Store(token, ctx)
 
-	for {
-		RequestWait()
-		data, err, de_err := readData(conn)
+	s.CtxMap.Store(token, ctx)
+	defer s.CtxMap.Delete(token)
+
+	for sc.CloseFlag == false {
+		sc.RequestWait()
+		data, err, de_err := sc.ReadData()
 		if err != nil {
 			fmt.Printf("Error reading data: %v, %T\n", err, err)
 			return
@@ -72,8 +95,8 @@ func handleConnection(conn net.Conn, group *sync.WaitGroup, zClient *zmq_client.
 			fmt.Printf("Error decoding data: %v, %T\n", de_err, de_err)
 			continue
 		}
-		ret := RequestFunction(ctx, data)
-		err = sendData(conn, ret)
+		ret := sc.RequestFunction(ctx, data)
+		err = sc.SendData(ret)
 		if err != nil {
 			fmt.Println("Error sending data:", err)
 			continue
@@ -81,146 +104,31 @@ func handleConnection(conn net.Conn, group *sync.WaitGroup, zClient *zmq_client.
 	}
 }
 
-// 读取消息内容
-func readData(conn net.Conn) (map[string]interface{}, error, error) {
-	lenBuffer := make([]byte, 4)
-	_, err := conn.Read(lenBuffer)
-	if err != nil {
-		return nil, err, nil
-	}
-	messageLength := binary.BigEndian.Uint32(lenBuffer)
-	fmt.Println("messageLength: ", messageLength)
-
-	var message []byte
-	var cap_unm uint32
-	conn.SetReadDeadline(time.Now().Add(5 * time.Second))
-	for t := messageLength; t > 0; {
-		if t > 4096 {
-			cap_unm = 4096
-		} else {
-			cap_unm = t
-		}
-		new_buffer := make([]byte, cap_unm)
-		n, err := conn.Read(new_buffer)
-		if err != nil {
-			return nil, err, nil
-		}
-		message = append(message, new_buffer[:n]...)
-		t -= uint32(n)
-		conn.SetReadDeadline(time.Now().Add(5 * time.Second))
-	}
-	conn.SetReadDeadline(time.Time{})
-
-	decryptedMessage, err := protocol.Decrypt(message)
-	if err != nil {
-		return nil, nil, err
-	}
-	// 解析 JSON 数据
-	var data map[string]interface{}
-	if err := json.Unmarshal(decryptedMessage, &data); err != nil {
-		return nil, nil, err
-	}
-	return data, nil, nil
-}
-
-// 发送数据
-func sendData(conn net.Conn, data map[string]interface{}) (err error) {
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		return err
-	}
-	encryptedMessage, err := protocol.Encrypt(jsonData)
-	if err != nil {
-		return err
-	}
-
-	msgLength := make([]byte, 4)
-	binary.BigEndian.PutUint32(msgLength, uint32(len(encryptedMessage)))
-	message := append(msgLength, encryptedMessage...)
-	conn.Write(message)
-
-	return nil
-}
-
-// 执行函数入口
-func RequestFunction(ctx *src.Ctx, data utils.Dict) utils.Dict {
-	if _, ok := data["cmd"]; !ok {
-		return map[string]interface{}{
-			"error": "invalid command",
-		}
-	}
-	cmd := data["cmd"].(string)
-	if _, ok := router.Routers[cmd]; !ok {
-		return map[string]interface{}{
-			"error": "invalid command",
-		}
-	}
-
-	if _, ok := data["data"]; !ok {
-		return map[string]interface{}{
-			"error": "invalid data",
-		}
-	}
-	data = data["data"].(map[string]interface{})
-
-	ret, err := func() (r map[string]interface{}, e error) {
-		defer func() {
-			if err := recover(); err != nil {
-				e = err.(error)
-				utils.PrintStackTrace()
-				fmt.Println("Error:", err)
-			}
-		}()
-		ctx.Cmd = cmd
-		for _, f := range middleware.MiddlewareList {
-			data = f.BeforeHandle(ctx, data)
-		}
-		r = router.Routers[cmd](ctx, data)
-		for _, f := range middleware.MiddlewareList {
-			r = f.AfterHandle(ctx, r)
-		}
-		return
-	}()
-	if err != nil {
-		return map[string]interface{}{
-			"error": "server error",
-		}
-	}
-	return map[string]interface{}{
-		"cmd":  cmd,
-		"data": ret,
-	}
-
-}
-
 // 监听连接请求
-func HandleServer(tcp *net.TCPListener) {
-	var group sync.WaitGroup
-	zClient := zmq_client.NewZMQClient()
-	go zClient.MessageListener()
-
-	for listenNewReq {
-		conn, err := tcp.Accept()
+func (s *Server) HandleServer() {
+	for s.ListenNewReq {
+		conn, err := s.Listener.Accept()
 		if err != nil {
 			fmt.Println("Error accepting connection:", err)
 			break
 		}
-		group.Add(1)
-		go handleConnection(conn, &group, zClient)
+		s.Group.Add(1)
+		go s.handleConnection(conn)
 	}
-	group.Wait()
+	s.Group.Wait()
 }
 
 // 启动信号监听
-func ListenSignal(c <-chan os.Signal, listener *net.TCPListener) {
+func (s *Server) ListenSignal() {
+	defer s.Close()
 	fmt.Printf("start listening for signals\n")
-	<-c
-	listener.Close()
-	listenNewReq = false
+	<-s.Stop
+	s.Listener.Close()
+	s.ListenNewReq = false
 	fmt.Println("Stop receiving new connections...")
-	<-c
 
-	src.Users.Range(func(key, value interface{}) bool {
+	<-s.Stop
+	s.CtxMap.Range(func(key, value interface{}) bool {
 		v := value.(*src.Ctx)
 		v.Close()
 		return true
@@ -230,25 +138,10 @@ func ListenSignal(c <-chan os.Signal, listener *net.TCPListener) {
 
 // 启动服务服务
 func StartServer() {
-	conf := config.GetC()
-	tcpAddr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", conf.Env.App.Host, conf.Env.App.Port))
-	if err != nil {
-		fmt.Println("Error resolving address:", err)
-		return
-	}
-
-	listener, err := net.ListenTCP("tcp", tcpAddr)
-	if err != nil {
-		fmt.Println("Error listening:", err)
-		return
-	}
-	defer listener.Close()
-
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	go ListenSignal(c, listener)
-	go UserActiveListener()
-	go AutoSave()
-	HandleServer(listener)
+	server := NewServer()
+	defer server.Close()
+	go server.UserActiveListener()
+	go server.AutoSave()
+	server.HandleServer()
 	fmt.Println("stop server")
 }

@@ -6,12 +6,8 @@ import (
 	"my_app/internal/db"
 	"my_app/internal/models"
 	"reflect"
-	"sync"
 	"time"
 )
-
-// 存储服务器所有玩家
-var Users sync.Map
 
 type ZMQInterface interface {
 	Send(message map[string]interface{}) (int, error)
@@ -38,7 +34,6 @@ type Ctx struct {
 func (ctx *Ctx) Close() {
 	ctx.Conn.Close()
 	ctx.SaveAll()
-	Users.Delete(ctx.Token)
 	if ctx.User != nil {
 		ctx.SetOffline(ctx.User.ID)
 	}

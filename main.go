@@ -6,7 +6,8 @@ import (
 	"my_app/internal/config"
 	"my_app/internal/db"
 	"my_app/internal/models"
-	"my_app/internal/ws_server"
+	"my_app/internal/server"
+	"my_app/pkg/profile"
 	"os"
 )
 
@@ -16,10 +17,11 @@ func main() {
 	flag.Parse()
 	defer os.Remove(fmt.Sprintf("pids/app_%d.pid", progress_id))
 
+	go profile.StartProfile()
 	config.LoadAllConfig()
 	db.InitDB()
 	db.InitRedis()
 	models.MirateTable()
-	ws_server.StartServer()
-	// server.StartServer()
+	// ws_server.StartServer()
+	server.StartServer()
 }

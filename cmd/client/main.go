@@ -10,14 +10,13 @@ import (
 )
 
 // 读取消息内容
-func readData(conn net.Conn) ([]byte, error) {
+func ReadData(conn net.Conn) ([]byte, error) {
 	lenBuffer := make([]byte, 4)
 	_, err := conn.Read(lenBuffer)
 	if err != nil {
 		return nil, err
 	}
 	messageLength := binary.BigEndian.Uint32(lenBuffer)
-	fmt.Println("messageLength: ", messageLength)
 
 	var message []byte
 	var cap_unm uint32
@@ -47,7 +46,7 @@ func readData(conn net.Conn) ([]byte, error) {
 }
 
 // 发送数据
-func sendData(conn net.Conn, data map[string]interface{}) (err error) {
+func SendData(conn net.Conn, data map[string]interface{}) (err error) {
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		return err
@@ -64,7 +63,6 @@ func sendData(conn net.Conn, data map[string]interface{}) (err error) {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("jsonData: %s\n", jsonData)
 	return nil
 }
 
@@ -76,25 +74,19 @@ func SendTest() {
 	}
 	defer conn.Close()
 
-	var n int = 1
-	var data map[string]interface{}
-	switch n {
-	case 1:
-		data = map[string]interface{}{
-			"cmd": "ReqLogin",
-			"data": map[string]interface{}{
-				"name":     "admin",
-				"password": "admin",
-			},
-		}
+	data := map[string]interface{}{
+		"cmd": "ReqKeepAlive",
+		"data": map[string]interface{}{
+			"name":     "admin",
+			"password": "admin",
+		},
 	}
-	err = sendData(conn, data)
+	err = SendData(conn, data)
 	if err != nil {
 		fmt.Println("Error sending data:", err)
 		return
 	}
-	ret, _ := readData(conn)
-	fmt.Printf("ret: %v\n", ret)
+	ReadData(conn)
 }
 
 func main() {
@@ -141,12 +133,12 @@ func main() {
 			}
 		}
 		// 发送 JSON 数据
-		err = sendData(conn, data)
+		err = SendData(conn, data)
 		if err != nil {
 			fmt.Println("Error sending data:", err)
 			return
 		}
-		ret, _ := readData(conn)
+		ret, _ := ReadData(conn)
 		fmt.Printf("ret: %s\n", ret)
 	}
 

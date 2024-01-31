@@ -1,34 +1,44 @@
 package throttle
 
 import (
-	"sync/atomic"
+	"context"
+	"fmt"
+	"sync"
 	"time"
 )
 
 type TokenBucketThrottle struct {
-	tokenBucket   chan struct{} // 桶
-	maxTokens     uint          // 最大令牌数量
-	tokenInterval time.Duration // 令牌产生时间间隔
-	closeFlag     atomic.Value  // 关闭
+	mu            sync.Mutex
+	tokenCount    uint32
+	maxTokens     uint32
+	tokenInterval time.Duration
+	ctx           context.Context
+	cancel        context.CancelFunc
 }
 
 // 创建一个令牌通
 func NewTokenBucketThrottle() *TokenBucketThrottle {
+	var maxTokens uint32 = 100
 	t := &TokenBucketThrottle{
-		tokenBucket:   make(chan struct{}),
-		maxTokens:     1000,
+		maxTokens:     maxTokens,
 		tokenInterval: 10 * time.Microsecond,
-		closeFlag:     atomic.Value{},
 	}
-	t.closeFlag.Store(false)
+	t.ctx, t.cancel = context.WithCancel(context.Background())
 	go func() {
 		ticker := time.NewTicker(t.tokenInterval)
 		defer ticker.Stop()
-		for range ticker.C {
-			if t.closeFlag.Load() == true {
+
+		for {
+			select {
+			case <-ticker.C:
+				t.mu.Lock()
+				if t.tokenCount < t.maxTokens {
+					t.tokenCount++
+				}
+				t.mu.Unlock()
+			case <-t.ctx.Done():
 				return
 			}
-			t.tokenBucket <- struct{}{}
 		}
 	}()
 	return t
@@ -36,12 +46,17 @@ func NewTokenBucketThrottle() *TokenBucketThrottle {
 
 // 关闭令牌通限制
 func (t *TokenBucketThrottle) Close() {
-	close(t.tokenBucket)
-	t.closeFlag.Store(true)
+	t.cancel()
 }
 
 // 请求是否可以通过
 func (t *TokenBucketThrottle) CanRequest() bool {
-	<-t.tokenBucket
-	return true
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	fmt.Printf("t.tokenCount: %v\n", t.tokenCount)
+	if t.tokenCount > 0 {
+		t.tokenCount--
+		return true
+	}
+	return false
 }

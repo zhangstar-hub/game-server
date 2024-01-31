@@ -8,14 +8,14 @@ import (
 	"sync"
 )
 
-func ReqTest(data utils.Dict) {
+func ReqTest(zClient *ZMQClient, data utils.Dict) {
 	jsonData := make(utils.Dict)
 	fmt.Printf("jsonData: %#v\n", jsonData)
 }
 
 // 把玩家掉线
-func ReqUserExit(data utils.Dict) {
-	src.Users.Range(func(key, value interface{}) bool {
+func ReqUserExit(zClient *ZMQClient, data utils.Dict) {
+	zClient.CtxMap.Range(func(key, value interface{}) bool {
 		v := value.(*src.Ctx)
 		if v.User != nil && v.User.ID == uint(data["uid"].(float64)) {
 			v.Close()
@@ -26,7 +26,7 @@ func ReqUserExit(data utils.Dict) {
 }
 
 // 刷新配置
-func ReqFlushConfig(data utils.Dict) {
+func ReqFlushConfig(zClient *ZMQClient, data utils.Dict) {
 	configName := data["configName"].(string)
 	if configName == "ALL" {
 		config.LoadAllConfig()
