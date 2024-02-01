@@ -37,8 +37,6 @@ func NewWSServer(Listener *http.Server) *WSServer {
 	ctxMap := &sync.Map{}
 	zClient := zmq_client.NewZMQClient(ctxMap)
 	go zClient.MessageListener()
-	roomManager := src.NewRoomManager()
-	go roomManager.AutoClearRoom()
 
 	stopChan := make(chan os.Signal)
 	signal.Notify(stopChan, os.Interrupt, syscall.SIGTERM)
@@ -50,7 +48,7 @@ func NewWSServer(Listener *http.Server) *WSServer {
 		Group:       &sync.WaitGroup{},
 		Stop:        stopChan,
 		CloseFlag:   false,
-		RoomManager: roomManager,
+		RoomManager: src.NewRoomManager(),
 	}
 	go s.ListenSignal()
 	return s
@@ -85,6 +83,7 @@ func (s *WSServer) handleConnections(w http.ResponseWriter, r *http.Request) {
 		LastSaveTime:   time.Now(),
 		Token:          token,
 		ZClient:        s.ZClient,
+		RoomManager:    s.RoomManager,
 	}
 	defer ctx.Close()
 

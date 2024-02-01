@@ -36,6 +36,7 @@ func PlayerLoadData(ctx *Ctx) {
 	ctx.Player = &Player{
 		Table: Table,
 		Ctx:   ctx,
+		Cards: []Card{},
 	}
 	json.Unmarshal([]byte(ctx.Player.Table.Cards), ctx.Player.Cards)
 }
@@ -79,6 +80,7 @@ func (p *Player) Reset() {
 	p.Table.Cards = "[]"
 }
 
+// 数据获取
 func (p *Player) GetRet() (ret utils.Dict) {
 	ret = make(utils.Dict, 0)
 	ret["cards"] = utils.Dict{

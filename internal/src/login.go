@@ -53,6 +53,7 @@ func ReqLogin(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 // 登录加载数据
 func LoginLoadData(ctx *Ctx) {
 	LoginBonusLoadData(ctx)
+	PlayerLoadData(ctx)
 }
 
 // 登录检测数据

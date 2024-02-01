@@ -32,9 +32,8 @@ func NewRoomManager() *RoomManager {
 func (m *RoomManager) EnterRoom(ctx *Ctx) (room *Room) {
 	success := false
 	ctx.Player.Reset()
-
 	m.Rooms.Range(func(key, value any) bool {
-		room := value.(*Room)
+		room = value.(*Room)
 		if success = room.EnterRoom(ctx.Player); success {
 			return false
 		}
@@ -94,7 +93,17 @@ func (rm *RoomManager) Close() error {
 
 func ReqEnterRoom(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 	ret = make(utils.Dict)
-	room := ctx.RoomManager.EnterRoom(ctx)
+	var room *Room
+	if ctx.Player.Table.RoomID > 0 {
+		r, ok := ctx.RoomManager.Rooms.Load(ctx.Player.Table.RoomID)
+		room = r.(*Room)
+		if !ok || room.InRoom(ctx.Player) == false {
+			ctx.Player.Reset()
+		}
+	}
+	if room == nil {
+		room = ctx.RoomManager.EnterRoom(ctx)
+	}
 	ret["room"] = room.GetRet()
 	return ret
 }

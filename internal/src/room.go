@@ -51,6 +51,7 @@ func (r *Room) EnterRoom(p *Player) bool {
 		return false
 	}
 	r.Players = append(r.Players, p)
+	p.Table.RoomID = r.ID
 	if len(r.Players) == 3 {
 		r.IsFull = true
 	}
@@ -65,6 +66,7 @@ func (r *Room) LeaveRoom(p *Player) {
 		if v == p {
 			r.Players = append(r.Players[:i], r.Players[i+1:]...)
 			r.IsFull = false
+			p.Reset()
 			break
 		}
 	}
@@ -135,7 +137,9 @@ func (r *Room) Settle() {
 // 游戏结束
 func (r *Room) GameOver() {
 	r.Settle()
-	r.timer.Stop()
+	if r.timer != nil {
+		r.timer.Stop()
+	}
 	r.IsOver = true
 	for _, p := range r.Players {
 		p.Reset()
@@ -146,8 +150,20 @@ func (r *Room) GameOver() {
 func (r *Room) Close() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.timer.Stop()
+	if r.timer != nil {
+		r.timer.Stop()
+	}
 	r.IsClosed = true
+}
+
+// 判断一个玩家是否在房间中
+func (r *Room) InRoom(player *Player) bool {
+	for _, v := range r.Players {
+		if v.Table.ID == player.Table.ID {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *Room) GetRet() utils.Dict {

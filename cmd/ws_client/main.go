@@ -140,6 +140,11 @@ func main() {
 				"cmd":  "ReqZmqTest",
 				"data": map[string]interface{}{},
 			}
+		case 5:
+			data = map[string]interface{}{
+				"cmd":  "ReqEnterRoom",
+				"data": map[string]interface{}{},
+			}
 		}
 		// 发送 JSON 数据
 		err = client.SendData(data)
