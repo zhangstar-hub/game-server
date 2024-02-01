@@ -18,12 +18,13 @@ import (
 )
 
 type WSServer struct {
-	CtxMap    *sync.Map             // 上下文集合
-	Listener  *http.Server          // socket监听器
-	ZClient   *zmq_client.ZMQClient // zmq_client
-	Group     *sync.WaitGroup       // 等待所有连接请求完成
-	Stop      chan os.Signal        // 服务关闭信号监听
-	CloseFlag bool                  // 关闭标记
+	CtxMap      *sync.Map             // 上下文集合
+	Listener    *http.Server          // socket监听器
+	ZClient     *zmq_client.ZMQClient // zmq_client
+	Group       *sync.WaitGroup       // 等待所有连接请求完成
+	Stop        chan os.Signal        // 服务关闭信号监听
+	CloseFlag   bool                  // 关闭标记
+	RoomManager *src.RoomManager      // 房间管理器
 }
 
 var upgrader = websocket.Upgrader{
@@ -36,17 +37,20 @@ func NewWSServer(Listener *http.Server) *WSServer {
 	ctxMap := &sync.Map{}
 	zClient := zmq_client.NewZMQClient(ctxMap)
 	go zClient.MessageListener()
+	roomManager := src.NewRoomManager()
+	go roomManager.AutoClearRoom()
 
 	stopChan := make(chan os.Signal)
 	signal.Notify(stopChan, os.Interrupt, syscall.SIGTERM)
 
 	s := &WSServer{
-		CtxMap:    ctxMap,
-		Listener:  Listener,
-		ZClient:   zClient,
-		Group:     &sync.WaitGroup{},
-		Stop:      stopChan,
-		CloseFlag: false,
+		CtxMap:      ctxMap,
+		Listener:    Listener,
+		ZClient:     zClient,
+		Group:       &sync.WaitGroup{},
+		Stop:        stopChan,
+		CloseFlag:   false,
+		RoomManager: roomManager,
 	}
 	go s.ListenSignal()
 	return s
@@ -55,6 +59,7 @@ func NewWSServer(Listener *http.Server) *WSServer {
 // 关闭服务
 func (s *WSServer) Close() {
 	s.Listener.Close()
+	s.RoomManager.Close()
 	s.CloseFlag = true
 }
 

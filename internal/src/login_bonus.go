@@ -7,13 +7,13 @@ import (
 	"my_app/internal/utils"
 )
 
-type LoginBonusCtx struct {
-	*models.LoginBonus
+type LoginBonus struct {
+	*models.LoginBonusModel
 }
 
 // 初始数据
-func InitData() models.LoginBonus {
-	return models.LoginBonus{
+func LoginBonusInitData() models.LoginBonusModel {
+	return models.LoginBonusModel{
 		SiginTimes:      0,
 		DailyFlushTime:  utils.TodayFlushTime(),
 		WeeklyFlushTime: utils.MondayFlushTime(),
@@ -22,35 +22,35 @@ func InitData() models.LoginBonus {
 
 // 加载数据
 func LoginBonusLoadData(ctx *Ctx) {
-	table := &models.LoginBonus{
+	table := &models.LoginBonusModel{
 		ID: ctx.User.ID,
 	}
-	db.DB.Attrs(InitData()).FirstOrInit(table)
-	ctx.LoginBonusCtx = &LoginBonusCtx{LoginBonus: table}
+	db.DB.Attrs(LoginBonusInitData()).FirstOrInit(table)
+	ctx.LoginBonus = &LoginBonus{LoginBonusModel: table}
 }
 
 // 保存数据
-func (c *LoginBonusCtx) Save() error {
-	if c.LoginBonus == nil {
+func (c *LoginBonus) Save() error {
+	if c.LoginBonusModel == nil {
 		return nil
 	}
-	return db.DB.Save(c.LoginBonus).Error
+	return db.DB.Save(c.LoginBonusModel).Error
 }
 
 // 判断是否是新的一天
-func (c *LoginBonusCtx) IsNewDay() bool {
+func (c *LoginBonus) IsNewDay() bool {
 	tomorrow := utils.TomorrowFlushTime()
 	return tomorrow.Sub(c.DailyFlushTime) > 0
 }
 
 // 判断是否是新的一周
-func (c *LoginBonusCtx) IsNewWeek() bool {
+func (c *LoginBonus) IsNewWeek() bool {
 	tomorrow := utils.NextMondayFlushTime()
 	return tomorrow.Sub(c.WeeklyFlushTime) > 0
 }
 
 // 登录奖励检查
-func (c *LoginBonusCtx) LoginCheck(ctx *Ctx, ret utils.Dict) {
+func (c *LoginBonus) LoginCheck(ctx *Ctx, ret utils.Dict) {
 	cfg := config.GetC()
 	LoginBonusRet := utils.Dict{}
 
@@ -76,7 +76,7 @@ func (c *LoginBonusCtx) LoginCheck(ctx *Ctx, ret utils.Dict) {
 }
 
 // 登录数据获取
-func (c *LoginBonusCtx) GetRet(ret utils.Dict) {
+func (c *LoginBonus) GetRet(ret utils.Dict) {
 	cfg := config.GetC()
 	utils.MergeMaps(ret["LoginBonus"].(utils.Dict), utils.Dict{
 		"siginTimes":   c.SiginTimes,

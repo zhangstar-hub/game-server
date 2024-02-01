@@ -1,9 +1,4 @@
-package doudizhu
-
-import (
-	"math/rand"
-	"sort"
-)
+package src
 
 // 定义牌的类型
 type Card struct {
@@ -12,7 +7,7 @@ type Card struct {
 }
 
 // 创建一副牌
-func NewDeck() []Card {
+func NewCards() []Card {
 	suits := []string{"Spades", "Hearts", "Diamonds", "Clubs"}
 	values := []string{"2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"}
 	jokers := []string{"Big Joker", "Small Joker"}
@@ -32,22 +27,5 @@ func NewDeck() []Card {
 		card := Card{Suit: "Joker", Value: joker}
 		deck = append(deck, card)
 	}
-
 	return deck
-}
-
-// 洗牌
-func ShuffleDeck(deck []Card) []Card {
-	rand.Shuffle(len(deck), func(i, j int) { deck[i], deck[j] = deck[j], deck[i] })
-	return deck
-}
-
-// 发牌
-func DealCards(players []Player, deck []Card) {
-	for i := 0; i < len(players); i++ {
-		players[i].Cards = deck[i*17 : (i+1)*17]
-		sort.Slice(players[i].Cards, func(j, k int) bool {
-			return players[i].Cards[j].Value < players[i].Cards[k].Value
-		})
-	}
 }

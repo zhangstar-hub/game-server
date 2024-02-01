@@ -26,8 +26,10 @@ type Ctx struct {
 	Token          string       // 登录产生的唯一ID
 	ZClient        ZMQInterface // zmq消息发送器
 
-	User          *models.User
-	LoginBonusCtx *LoginBonusCtx
+	User        *models.UserModel
+	LoginBonus  *LoginBonus
+	Player      *Player
+	RoomManager *RoomManager
 }
 
 // 玩家退出清理
@@ -52,7 +54,7 @@ func SaveOne(entity SaveEntry) {
 // 保存全部数据
 func (ctx *Ctx) SaveAll() {
 	SaveOne(ctx.User)
-	SaveOne(ctx.LoginBonusCtx)
+	SaveOne(ctx.LoginBonus)
 }
 
 // 检测玩家是否在线

@@ -92,71 +92,71 @@ func SendTest() {
 	}
 }
 
-// func main() {
-// 	serverURL := "ws://localhost:8080/"
+func main() {
+	serverURL := "ws://localhost:8080/"
 
-// 	// 创建 WebSocket 客户端
-// 	client, err := NewWebSocketClient(serverURL)
-// 	if err != nil {
-// 		fmt.Println("Error creating WebSocket client:", err)
-// 		return
-// 	}
-// 	defer client.Close()
+	// 创建 WebSocket 客户端
+	client, err := NewWebSocketClient(serverURL)
+	if err != nil {
+		fmt.Println("Error creating WebSocket client:", err)
+		return
+	}
+	defer client.Close()
 
-// 	var n int
-// 	for {
-// 		fmt.Println("please input your choice:")
-// 		fmt.Scanln(&n)
-// 		var data map[string]interface{}
-// 		switch n {
-// 		case 1:
-// 			data = map[string]interface{}{
-// 				"cmd": "ReqLogin",
-// 				"data": map[string]interface{}{
-// 					"name":     "admin",
-// 					"password": "admin",
-// 				},
-// 			}
-// 		case 2:
-// 			data = map[string]interface{}{
-// 				"cmd": "ReqTest",
-// 				"data": map[string]interface{}{
-// 					"test": "test",
-// 				},
-// 			}
-// 			for i := 0; i < 10000; i++ {
-// 				data["data"].(map[string]interface{})[string(i)] = i
-// 			}
-// 		case 3:
-// 			d := map[string]interface{}{
-// 				"coin": 1,
-// 			}
-// 			data = map[string]interface{}{
-// 				"cmd":  "ReqAddCoin",
-// 				"data": d,
-// 			}
-// 		case 4:
-// 			data = map[string]interface{}{
-// 				"cmd":  "ReqZmqTest",
-// 				"data": map[string]interface{}{},
-// 			}
-// 		}
-// 		// 发送 JSON 数据
-// 		err = client.SendData(data)
-// 		if err != nil {
-// 			fmt.Println("Error sending data:", err)
-// 			return
-// 		}
+	var n int
+	for {
+		fmt.Println("please input your choice:")
+		fmt.Scanln(&n)
+		var data map[string]interface{}
+		switch n {
+		case 1:
+			data = map[string]interface{}{
+				"cmd": "ReqLogin",
+				"data": map[string]interface{}{
+					"name":     "admin",
+					"password": "admin",
+				},
+			}
+		case 2:
+			data = map[string]interface{}{
+				"cmd": "ReqTest",
+				"data": map[string]interface{}{
+					"test": "test",
+				},
+			}
+			for i := 0; i < 10000; i++ {
+				data["data"].(map[string]interface{})[string(i)] = i
+			}
+		case 3:
+			d := map[string]interface{}{
+				"coin": 1,
+			}
+			data = map[string]interface{}{
+				"cmd":  "ReqAddCoin",
+				"data": d,
+			}
+		case 4:
+			data = map[string]interface{}{
+				"cmd":  "ReqZmqTest",
+				"data": map[string]interface{}{},
+			}
+		}
+		// 发送 JSON 数据
+		err = client.SendData(data)
+		if err != nil {
+			fmt.Println("Error sending data:", err)
+			return
+		}
 
-// 		ret, err, de_err := client.ReadData()
-// 		if err != nil {
-// 			fmt.Printf("Error reading data: %v, %T\n", err, err)
-// 			return
-// 		}
-// 		if de_err != nil {
-// 			fmt.Printf("Error decoding data: %v, %T\n", de_err, de_err)
-// 			continue
-// 		}
-// 		fmt.Printf("ret: %+v\n", ret)
-// 	}
-// }
+		ret, err, de_err := client.ReadData()
+		if err != nil {
+			fmt.Printf("Error reading data: %v, %T\n", err, err)
+			return
+		}
+		if de_err != nil {
+			fmt.Printf("Error decoding data: %v, %T\n", de_err, de_err)
+			continue
+		}
+		fmt.Printf("ret: %+v\n", ret)
+	}
+}

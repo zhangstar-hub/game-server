@@ -9,7 +9,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type User struct {
+type UserModel struct {
 	ID         uint   `gorm:"primary_key"`
 	Name       string `gorm:"unique"`
 	Password   string
@@ -21,20 +21,20 @@ type User struct {
 }
 
 // 是否是新用户
-func (u *User) IsNewUser() bool {
+func (u *UserModel) IsNewUser() bool {
 	return time.Since(u.FirstLogin) <= 7*time.Hour
 }
 
 // 保存数据
-func (u *User) Save() error {
+func (u *UserModel) Save() error {
 	if u == nil {
 		return nil
 	}
 	return db.DB.Save(u).Error
 }
 
-func GetUserByName(name, password string) (*User, error) {
-	user := User{Name: name}
+func GetUserByName(name, password string) (*UserModel, error) {
+	user := UserModel{Name: name}
 	tx := db.DB.Where(&user).First(&user)
 	if tx.RowsAffected == 0 {
 		return nil, nil
@@ -46,14 +46,14 @@ func GetUserByName(name, password string) (*User, error) {
 	return &user, nil
 }
 
-func CreateUser(name, password string) *User {
+func CreateUser(name, password string) *UserModel {
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		panic(errors.New("error hashing password"))
 	}
 
-	user := &User{
+	user := &UserModel{
 		Name:       name,
 		Password:   string(hashedPassword),
 		FirstLogin: time.Now(),

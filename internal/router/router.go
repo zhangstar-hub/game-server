@@ -13,4 +13,5 @@ var Routers = map[string]viewFunction{
 	"ReqAddCoin":    src.ReqAddCoin,
 	"ReqGetMission": src.ReqGetMission,
 	"ReqKeepAlive":  src.ReqKeepAlive,
+	"ReqEnterRoom":  src.ReqEnterRoom,
 }

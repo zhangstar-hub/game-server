@@ -2,7 +2,6 @@ package throttle
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 )
@@ -53,7 +52,6 @@ func (t *TokenBucketThrottle) Close() {
 func (t *TokenBucketThrottle) CanRequest() bool {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	fmt.Printf("t.tokenCount: %v\n", t.tokenCount)
 	if t.tokenCount > 0 {
 		t.tokenCount--
 		return true

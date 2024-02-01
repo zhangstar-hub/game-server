@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-type LoginBonus struct {
+type LoginBonusModel struct {
 	ID              uint      `gorm:"primary_key"`
 	SiginTimes      int       // 签到次数
 	DailyFlushTime  time.Time // 日刷新时间

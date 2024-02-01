@@ -5,6 +5,8 @@ import (
 	"my_app/internal/src"
 	"my_app/internal/utils"
 	"time"
+
+	"github.com/thoas/go-funk"
 )
 
 type LoginMiddleware struct{}
@@ -15,7 +17,7 @@ var NoLoingReqList = []string{
 }
 
 func (m *LoginMiddleware) BeforeHandle(ctx *src.Ctx, data utils.Dict) utils.Dict {
-	index := utils.ArrayIndexOfString(NoLoingReqList, ctx.Cmd)
+	index := funk.IndexOfString(NoLoingReqList, ctx.Cmd)
 	if index == -1 && ctx.User == nil {
 		panic(errors.New("login required"))
 	}

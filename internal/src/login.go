@@ -57,10 +57,10 @@ func LoginLoadData(ctx *Ctx) {
 
 // 登录检测数据
 func LoginCheckData(ctx *Ctx, ret utils.Dict) {
-	ctx.LoginBonusCtx.LoginCheck(ctx, ret)
+	ctx.LoginBonus.LoginCheck(ctx, ret)
 }
 
 // 登录返回数据
 func LoginRetData(ctx *Ctx, ret utils.Dict) {
-	ctx.LoginBonusCtx.GetRet(ret)
+	ctx.LoginBonus.GetRet(ret)
 }
