@@ -2,7 +2,6 @@ package src
 
 import (
 	"fmt"
-	"io"
 	"my_app/internal/db"
 	"my_app/internal/models"
 	"reflect"
@@ -14,17 +13,22 @@ type ZMQInterface interface {
 	Recv() ([]byte, error)
 }
 
+type ConnInterface interface {
+	SendData(message map[string]interface{}) error
+	Close() error
+}
+
 type SaveEntry interface {
 	Save() error
 }
 
 type Ctx struct {
-	Conn           io.Closer    // tcp 连接
-	Cmd            string       // 当前处理的命令
-	LastActiveTime time.Time    // 上一次存活的时间
-	LastSaveTime   time.Time    // 上一次存档的时间
-	Token          string       // 登录产生的唯一ID
-	ZClient        ZMQInterface // zmq消息发送器
+	Conn           ConnInterface // tcp 连接
+	Cmd            string        // 当前处理的命令
+	LastActiveTime time.Time     // 上一次存活的时间
+	LastSaveTime   time.Time     // 上一次存档的时间
+	Token          string        // 登录产生的唯一ID
+	ZClient        ZMQInterface  // zmq消息发送器
 
 	User        *models.UserModel
 	LoginBonus  *LoginBonus
@@ -55,6 +59,7 @@ func SaveOne(entity SaveEntry) {
 func (ctx *Ctx) SaveAll() {
 	SaveOne(ctx.User)
 	SaveOne(ctx.LoginBonus)
+	SaveOne(ctx.Player)
 }
 
 // 检测玩家是否在线
@@ -79,7 +84,7 @@ func (ctx *Ctx) SetOffline(uid uint) {
 // 发送退出消息
 func (ctx *Ctx) QuitMessage(uid uint) {
 	ctx.ZClient.Send(map[string]interface{}{
-		"cmd": "ReqUserExit",
+		"cmd": "ReqZUserExit",
 		"data": map[string]interface{}{
 			"uid": uid,
 		},

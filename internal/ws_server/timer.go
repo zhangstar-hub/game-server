@@ -10,7 +10,7 @@ func (s *WSServer) UserActiveListener() {
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 
-	timeoutLimit := 60 * time.Second
+	timeoutLimit := 600 * time.Second
 
 	for range ticker.C {
 		if s.CloseFlag {

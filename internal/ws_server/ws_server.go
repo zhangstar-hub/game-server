@@ -35,7 +35,9 @@ var upgrader = websocket.Upgrader{
 
 func NewWSServer(Listener *http.Server) *WSServer {
 	ctxMap := &sync.Map{}
-	zClient := zmq_client.NewZMQClient(ctxMap)
+	roomManager := src.NewRoomManager()
+
+	zClient := zmq_client.NewZMQClient(ctxMap, roomManager)
 	go zClient.MessageListener()
 
 	stopChan := make(chan os.Signal)
@@ -48,7 +50,7 @@ func NewWSServer(Listener *http.Server) *WSServer {
 		Group:       &sync.WaitGroup{},
 		Stop:        stopChan,
 		CloseFlag:   false,
-		RoomManager: src.NewRoomManager(),
+		RoomManager: roomManager,
 	}
 	go s.ListenSignal()
 	return s

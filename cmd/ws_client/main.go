@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/gorilla/websocket"
 )
@@ -85,10 +86,25 @@ func SendTest() {
 	_, err, de_err := client.ReadData()
 	if err != nil {
 		fmt.Printf("Error reading data: %v, %T\n", err, err)
-		return
 	}
 	if de_err != nil {
 		fmt.Printf("Error decoding data: %v, %T\n", de_err, de_err)
+	}
+}
+
+func ReadListeners(client *WebSocketClient) {
+	for {
+		ret, err, de_err := client.ReadData()
+		if err != nil {
+			fmt.Printf("Error reading data: %v, %T\n", err, err)
+			os.Exit(0)
+		}
+		if de_err != nil {
+			fmt.Printf("Error decoding data: %v, %T\n", de_err, de_err)
+			continue
+		}
+		r, _ := json.Marshal(ret)
+		fmt.Printf("ret: %s\n", r)
 	}
 }
 
@@ -102,7 +118,7 @@ func main() {
 		return
 	}
 	defer client.Close()
-
+	go ReadListeners(client)
 	var n int
 	for {
 		fmt.Println("please input your choice:")
@@ -142,26 +158,39 @@ func main() {
 			}
 		case 5:
 			data = map[string]interface{}{
+				"cmd": "ReqRoomReady",
+				"data": map[string]interface{}{
+					"is_ready": true,
+				},
+			}
+		case 6:
+			data = map[string]interface{}{
 				"cmd":  "ReqEnterRoom",
 				"data": map[string]interface{}{},
 			}
+		case 7:
+			data = map[string]interface{}{
+				"cmd": "ReqLogin",
+				"data": map[string]interface{}{
+					"name":     "admin2",
+					"password": "admin",
+				},
+			}
+		case 8:
+			data = map[string]interface{}{
+				"cmd": "ReqLogin",
+				"data": map[string]interface{}{
+					"name":     "admin3",
+					"password": "admin",
+				},
+			}
 		}
+
 		// 发送 JSON 数据
 		err = client.SendData(data)
 		if err != nil {
 			fmt.Println("Error sending data:", err)
 			return
 		}
-
-		ret, err, de_err := client.ReadData()
-		if err != nil {
-			fmt.Printf("Error reading data: %v, %T\n", err, err)
-			return
-		}
-		if de_err != nil {
-			fmt.Printf("Error decoding data: %v, %T\n", de_err, de_err)
-			continue
-		}
-		fmt.Printf("ret: %+v\n", ret)
 	}
 }

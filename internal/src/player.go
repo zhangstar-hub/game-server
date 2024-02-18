@@ -47,8 +47,8 @@ func (p *Player) Save() error {
 }
 
 // 准备
-func (p *Player) Ready() {
-	p.Table.Ready = true
+func (p *Player) SetReady(status bool) {
+	p.Table.Ready = status
 }
 
 // 叫分
@@ -82,13 +82,12 @@ func (p *Player) Reset() {
 
 // 数据获取
 func (p *Player) GetRet() (ret utils.Dict) {
-	ret = make(utils.Dict, 0)
-	ret["cards"] = utils.Dict{
+	ret = utils.Dict{
 		"cards": p.Cards,
 		"role":  p.Table.Role,
 		"score": p.Table.CallScore,
 		"ready": p.Table.Ready,
 		"room":  p.Table.RoomID,
 	}
-	return
+	return ret
 }

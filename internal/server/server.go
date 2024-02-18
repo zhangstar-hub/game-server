@@ -38,7 +38,9 @@ func NewServer() *Server {
 	}
 
 	ctxMap := &sync.Map{}
-	zClient := zmq_client.NewZMQClient(ctxMap)
+	roomManager := src.NewRoomManager()
+
+	zClient := zmq_client.NewZMQClient(ctxMap, roomManager)
 	go zClient.MessageListener()
 
 	stopChan := make(chan os.Signal)

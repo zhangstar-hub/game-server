@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"my_app/internal/config"
 	"my_app/internal/logger"
+	"my_app/internal/src"
 	"my_app/internal/utils"
 	"sync"
 
@@ -12,18 +13,20 @@ import (
 )
 
 type ZMQClient struct {
-	client *zmq4.Socket
-	CtxMap *sync.Map
+	client      *zmq4.Socket
+	CtxMap      *sync.Map
+	RoomManager *src.RoomManager
 }
 
-func NewZMQClient(ctxMap *sync.Map) *ZMQClient {
+func NewZMQClient(ctxMap *sync.Map, roomManager *src.RoomManager) *ZMQClient {
 	conf := config.GetC()
 	client, _ := zmq4.NewSocket(zmq4.DEALER)
 	client.SetIdentity(fmt.Sprintf("%s:%d", utils.GetLocalIP(), conf.Env.App.Port))
 
 	zClient := &ZMQClient{
-		client: client,
-		CtxMap: ctxMap,
+		client:      client,
+		CtxMap:      ctxMap,
+		RoomManager: roomManager,
 	}
 	err := client.Connect(conf.Env.ZMQCenter.Address)
 	if err != nil {
@@ -79,8 +82,14 @@ func (z *ZMQClient) MessageListener() {
 			continue
 		}
 		data := messageMap["data"].(utils.Dict)
-		ZMQRouters[cmd](z, data)
-
+		func() {
+			defer func() {
+				if err := recover(); err != nil {
+					logger.ZMQInfo(fmt.Sprintf("ZMQClient MessageListener panic: %s", err))
+				}
+			}()
+			ZMQRouters[cmd](z, data)
+		}()
 		msg := fmt.Sprintf("ClientRecv message:%s", message)
 		logger.ZMQInfo(msg)
 	}
