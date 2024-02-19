@@ -1,15 +1,27 @@
 package main
 
-import "fmt"
-
-type S struct {
-	c  string
-	c1 []int
-}
+const (
+	Unknown           = iota // 未知牌型
+	Single                   // 单张
+	Pair                     // 对子
+	Three                    // 三张
+	Straight                 // 顺子
+	PairStraight             // 连对
+	ThreeWithOne             // 三带一
+	ThreeWithTwo             // 三带二
+	Bomb                     // 炸弹
+	KingBomb                 // 王炸
+	PlaneWithoutWings        // 飞机不带翅膀
+	PlaneWithSingle          // 飞机带单牌
+	PlaneWithPair            // 飞机带对子
+)
 
 func main() {
-	var s *S
-	if s == nil {
-		fmt.Println("nil")
+	a := interface{}(1)
+	switch a {
+	case '1', '2', interface{}(1):
+		print("case 1:\n")
+	case 1:
+		print("case 2:\n")
 	}
 }

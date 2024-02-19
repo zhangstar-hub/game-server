@@ -15,4 +15,7 @@ var Routers = map[string]viewFunction{
 	"ReqKeepAlive":  src.ReqKeepAlive,
 	"ReqEnterRoom":  src.ReqEnterRoom,
 	"ReqRoomReady":  src.ReqRoomReady,
+	"ReqWatchCards": src.ReqWatchCards,
+	"ReqGetRole":    src.ReqGetRole,
+	"ReqCallScore":  src.ReqCallScore,
 }

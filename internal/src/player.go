@@ -23,6 +23,7 @@ func PlayerInitData() models.PlayerModel {
 		Ready:     false,
 		Role:      1,
 		RoomID:    0,
+		DeskID:    0,
 		CallScore: 0,
 	}
 }
@@ -57,7 +58,7 @@ func (p *Player) Call(score int) {
 }
 
 // 身份确认
-func (p *Player) Confirm(role int) {
+func (p *Player) ConfirmRole(role int) {
 	p.Table.Role = role
 }
 

@@ -1,7 +1,7 @@
 package src
 
 import (
-	"fmt"
+	"errors"
 	"math/rand"
 	"my_app/internal/utils"
 	"sort"
@@ -10,32 +10,67 @@ import (
 
 // 房间
 type Room struct {
-	ID       int32 // 房间ID
-	Ctx      *Ctx
-	Cards    []Card     // 桌面上的纸牌
-	Players  []*Player  // 玩家
-	Score    uint64     // 分数
-	CoinPool uint64     //	奖池
-	mu       sync.Mutex // 一个锁
-	IsOver   bool       // 游戏是否结束
-	IsFull   bool       // 是否满房了
-	IsClosed bool       // 房间是否关闭
-	winRole  int        // 胜利的角色
+	ID           int32        // 房间ID
+	BeforeCards  []Card       // 上一次出牌
+	Cards        []Card       // 桌面上的纸牌
+	Players      [3]*Player   // 玩家
+	Score        uint64       // 分数
+	CoinPool     uint64       //	奖池
+	mu           sync.RWMutex // 一个锁
+	IsOver       bool         // 游戏是否结束
+	IsFull       bool         // 是否满房了
+	IsClosed     bool         // 房间是否关闭
+	winRole      int          // 胜利的角色
+	CallDeskID   int          // 出手座位号
+	CallScoreNum int          // 叫分次数
+	MaxCallSocre int          // 叫分最大数
 }
 
-func NewRoom(ctx *Ctx) *Room {
+func NewRoom() *Room {
 	return &Room{
-		Ctx:      ctx,
 		Cards:    NewCards(),
-		Players:  make([]*Player, 0),
+		Players:  [3]*Player{},
 		Score:    0,
 		CoinPool: 0,
-		mu:       sync.Mutex{},
+		mu:       sync.RWMutex{},
 		IsOver:   false,
 		IsFull:   false,
 		IsClosed: false,
 		winRole:  0,
 	}
+}
+
+// 房间人数
+func (r *Room) PlayerNum() int {
+	num := 0
+	for _, v := range r.Players {
+		if v != nil {
+			num++
+		}
+	}
+	return num
+}
+
+// 出手流转
+func (r *Room) ConvertCall() {
+	r.CallDeskID = (r.CallDeskID + 1) % 3
+}
+
+// 获取房间中玩家ID
+func (r *Room) PlayerIds(exculdeId uint) []uint {
+	ids := make([]uint, 0)
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	for _, v := range r.Players {
+		if v == nil {
+			continue
+		}
+		if v.Table.ID == exculdeId {
+			continue
+		}
+		ids = append(ids, v.Table.ID)
+	}
+	return ids
 }
 
 // 玩家进入房间
@@ -48,10 +83,15 @@ func (r *Room) EnterRoom(p *Player) bool {
 	if r.IsClosed {
 		return false
 	}
-	r.Players = append(r.Players, p)
-	fmt.Printf("%v\n", r.Players)
-	p.Table.RoomID = r.ID
-	if len(r.Players) == 3 {
+	for i := 0; i < len(r.Players); i++ {
+		if r.Players[i] == nil {
+			r.Players[i] = p
+			p.Table.RoomID = r.ID
+			p.Table.DeskID = i
+			break
+		}
+	}
+	if r.PlayerNum() == 3 {
 		r.IsFull = true
 	}
 	return true
@@ -63,7 +103,7 @@ func (r *Room) LeaveRoom(p *Player) {
 	defer r.mu.Unlock()
 	for i, v := range r.Players {
 		if v == p {
-			r.Players = append(r.Players[:i], r.Players[i+1:]...)
+			r.Players[i] = nil
 			r.IsFull = false
 			p.Reset()
 			break
@@ -71,13 +111,52 @@ func (r *Room) LeaveRoom(p *Player) {
 	}
 }
 
-// 发牌
-func (r *Room) DealCards() {
+// 准备房间中玩家是否全部准备
+func (r *Room) ReadyCheck() bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	for _, v := range r.Players {
+		if v == nil || !v.Table.Ready {
+			return false
+		}
+	}
+	return true
+}
+
+// 初始化
+func (r *Room) PlayInit() {
+	r.CallDeskID = rand.Intn(3)
+
+	// 发牌
 	for i := 0; i < len(r.Players); i++ {
 		r.Players[i].Cards = append([]Card{}, r.Cards[i*17:(i+1)*17]...)
 		sort.Slice(r.Players[i].Cards, func(j, k int) bool {
 			return r.Players[i].Cards[j].Value < r.Players[i].Cards[k].Value
 		})
+	}
+}
+
+// 叫分
+func (r *Room) CallScore(p *Player, score int) {
+	if p.Table.DeskID != r.CallDeskID {
+		panic(errors.New("you can't call score"))
+	}
+	p.Call(score)
+	if r.MaxCallSocre < score {
+		r.MaxCallSocre = score
+	}
+	r.CallScoreNum += 1
+}
+
+// 身份确认
+func (r *Room) ConfirmRole() {
+	for i, v := range r.Players {
+		if v.Table.CallScore == r.MaxCallSocre {
+			v.ConfirmRole(2)
+			r.CallDeskID = i
+		} else {
+			v.ConfirmRole(1)
+		}
 	}
 }
 
@@ -87,22 +166,20 @@ func ShuffleDeck(deck []Card) {
 }
 
 // 出牌
-func (r *Room) PlayCard(cards []Card) {
-	for i, p := range r.Players {
-		if p.Table.IsCall {
-			if err := p.PlayCard(cards); err != nil {
-				panic(err)
-			}
-			if len(p.Cards) <= 0 {
-				r.winRole = p.Table.Role
-				r.GameOver()
-				return
-			}
-			p.Table.IsCall = false
-			r.Players[(i+1)%3].Table.IsCall = true
-			break
-		}
+func (r *Room) PlayCard(p *Player, cards []Card) error {
+	if !IsValidPlay(r.BeforeCards, cards) {
+		return errors.New("invalid cards")
 	}
+	if r.CallDeskID != p.Table.DeskID {
+		return errors.New("you can't play")
+	}
+	p.PlayCard(cards)
+	if len(p.Cards) <= 0 {
+		r.winRole = p.Table.Role
+		r.GameOver()
+	}
+	r.ConvertCall()
+	return nil
 }
 
 // 结算
@@ -151,37 +228,37 @@ func (r *Room) Close() {
 // 判断一个玩家是否在房间中
 func (r *Room) InRoom(uid uint) bool {
 	for _, v := range r.Players {
-		if v.Table.ID == uid {
+		if v != nil && v.Table.ID == uid {
 			return true
 		}
 	}
 	return false
 }
 
-func (r *Room) GetRet() utils.Dict {
+func (r *Room) GetRet(p *Player) utils.Dict {
 	ret := utils.Dict{
 		"id":       r.ID,
 		"is_over":  r.IsOver,
-		"is_full":  r.IsFull,
 		"win_role": r.winRole,
 		"score":    r.Score,
 	}
 
 	ret["myInfo"] = utils.Dict{
-		"cards": r.Ctx.Player.Cards,
+		"cards": p.Cards,
 	}
 	playersInfo := make([]utils.Dict, 0)
 	for _, p := range r.Players {
-		playersInfo = append(playersInfo, utils.Dict{
-			"id":       p.Table.ID,
-			"role":     p.Table.Role,
-			"is_call":  p.Table.IsCall,
-			"is_win":   p.Table.IsWin,
-			"is_ready": p.Table.Ready,
-			"card_len": len(p.Cards),
-			"coin":     p.Ctx.User.Coin,
-			"name":     p.Ctx.User.Name,
-		})
+		pInfo := utils.Dict{}
+		if p != nil {
+			pInfo["id"] = p.Table.ID
+			pInfo["role"] = p.Table.Role
+			pInfo["is_win"] = p.Table.IsWin
+			pInfo["is_ready"] = p.Table.Ready
+			pInfo["card_num"] = len(p.Cards)
+			pInfo["coin"] = p.Ctx.User.Coin
+			pInfo["name"] = p.Ctx.User.Name
+		}
+		playersInfo = append(playersInfo, pInfo)
 	}
 	ret["players"] = playersInfo
 	return ret

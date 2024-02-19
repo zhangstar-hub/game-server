@@ -65,7 +65,22 @@ func ReqZNotify(zClient *ZMQClient, cmd string, data utils.Dict) {
 	})
 }
 
+// 玩家进入房间
+func ReqZEnterRoom(zClient *ZMQClient, data utils.Dict) {
+	ReqZNotify(zClient, "ReqEnterRoom", data)
+}
+
 // 玩家准备通知
 func ReqZRoomReady(zClient *ZMQClient, data utils.Dict) {
 	ReqZNotify(zClient, "ReqRoomReady", data)
+}
+
+// 玩家叫分
+func ReqZCallScore(zClient *ZMQClient, data utils.Dict) {
+	ReqZNotify(zClient, "ReqCallScore", data)
+}
+
+// 玩家出牌
+func ReqZPlayCards(zClient *ZMQClient, data utils.Dict) {
+	ReqZNotify(zClient, "ReqPlayCards", data)
 }

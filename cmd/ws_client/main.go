@@ -114,14 +114,27 @@ func main() {
 	// 创建 WebSocket 客户端
 	client, err := NewWebSocketClient(serverURL)
 	if err != nil {
-		fmt.Println("Error creating WebSocket client:", err)
+		fmt.Println("Error creating WebSocket client:zmqTest", err)
 		return
 	}
 	defer client.Close()
 	go ReadListeners(client)
 	var n int
 	for {
-		fmt.Println("please input your choice:")
+		fmt.Println(`please input your choice:
+		1:login
+		2:Test
+		3:addCoin
+		4:ReqZmqTest
+		5:ReqRoomReady
+		6:ReqEnterRoom
+		7:ReqLogin2
+		8:ReqLogin3
+		9:ReqWatchCards
+		10:ReqGetRole
+		11:ReqCallScore 2
+		12:ReqCallScore 3
+		`)
 		fmt.Scanln(&n)
 		var data map[string]interface{}
 		switch n {
@@ -182,6 +195,30 @@ func main() {
 				"data": map[string]interface{}{
 					"name":     "admin3",
 					"password": "admin",
+				},
+			}
+		case 9:
+			data = map[string]interface{}{
+				"cmd":  "ReqWatchCards",
+				"data": map[string]interface{}{},
+			}
+		case 10:
+			data = map[string]interface{}{
+				"cmd":  "ReqGetRole",
+				"data": map[string]interface{}{},
+			}
+		case 11:
+			data = map[string]interface{}{
+				"cmd": "ReqCallScore",
+				"data": map[string]interface{}{
+					"score": 2,
+				},
+			}
+		case 12:
+			data = map[string]interface{}{
+				"cmd": "ReqCallScore",
+				"data": map[string]interface{}{
+					"score": 3,
 				},
 			}
 		}

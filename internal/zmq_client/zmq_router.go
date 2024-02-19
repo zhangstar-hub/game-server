@@ -9,4 +9,7 @@ var ZMQRouters = map[string]viewFunction{
 	"ReqZUserExit":    ReqZUserExit,
 	"ReqZFlushConfig": ReqZFlushConfig,
 	"ReqZRoomReady":   ReqZRoomReady,
+	"ReqZPlayCards":   ReqZPlayCards,
+	"ReqZEnterRoom":   ReqZEnterRoom,
+	"ReqZCallScore":   ReqZCallScore,
 }
