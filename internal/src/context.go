@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"my_app/internal/db"
 	"my_app/internal/models"
+	"my_app/internal/utils"
 	"reflect"
 	"time"
 )
 
 type ZMQInterface interface {
 	Send(message map[string]interface{}) (int, error)
+	SendMessage(cmd string, form_uid uint, to_uid_list []uint, message utils.Dict)
 	Recv() ([]byte, error)
 }
 
@@ -38,10 +40,13 @@ type Ctx struct {
 
 // 玩家退出清理
 func (ctx *Ctx) Close() {
-	ctx.Conn.Close()
+	if ok, r := ctx.RoomManager.GetRoom(ctx); ok {
+		r.LeaveRoom(ctx)
+	}
 	ctx.SaveAll()
+	ctx.Conn.Close()
 	if ctx.User != nil {
-		ctx.SetOffline(ctx.User.ID)
+		SetOffline(ctx.User.ID)
 	}
 }
 
@@ -59,26 +64,6 @@ func SaveOne(entity SaveEntry) {
 func (ctx *Ctx) SaveAll() {
 	SaveOne(ctx.User)
 	SaveOne(ctx.LoginBonus)
-	SaveOne(ctx.Player)
-}
-
-// 检测玩家是否在线
-func (ctx *Ctx) IsOnline(uid uint) bool {
-	key := fmt.Sprintf("user:%d", uid)
-	ret, _ := db.RedisClient.Exists(key)
-	return ret > 0
-}
-
-// 标记玩家为在线玩家
-func (ctx *Ctx) SetOnline(uid uint) {
-	key := fmt.Sprintf("user:%d", uid)
-	db.RedisClient.Set(key, "1", time.Hour*24*14)
-}
-
-// 设置玩家为离线玩家
-func (ctx *Ctx) SetOffline(uid uint) {
-	key := fmt.Sprintf("user:%d", uid)
-	db.RedisClient.Delete(key)
 }
 
 // 发送退出消息
@@ -89,4 +74,23 @@ func (ctx *Ctx) QuitMessage(uid uint) {
 			"uid": uid,
 		},
 	})
+}
+
+// 检测玩家是否在线
+func IsOnline(uid uint) bool {
+	key := fmt.Sprintf("user:%d", uid)
+	ret, _ := db.RedisClient.Exists(key)
+	return ret > 0
+}
+
+// 标记玩家为在线玩家
+func SetOnline(uid uint) {
+	key := fmt.Sprintf("user:%d", uid)
+	db.RedisClient.Set(key, "1", time.Hour*24*14)
+}
+
+// 设置玩家为离线玩家
+func SetOffline(uid uint) {
+	key := fmt.Sprintf("user:%d", uid)
+	db.RedisClient.Delete(key)
 }

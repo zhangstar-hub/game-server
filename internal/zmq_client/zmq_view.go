@@ -50,8 +50,6 @@ func ReqZNotify(zClient *ZMQClient, cmd string, data utils.Dict) {
 
 	zClient.CtxMap.Range(func(key, value any) bool {
 		v := value.(*src.Ctx)
-		fmt.Printf("v.User.ID: %v\n", v.User.ID)
-		fmt.Printf("to_uid_list: %v\n", to_uid_list)
 		if _, ok := to_uid_list[v.User.ID]; ok {
 			v.Conn.SendData(utils.Dict{
 				"cmd": cmd,
@@ -83,4 +81,9 @@ func ReqZCallScore(zClient *ZMQClient, data utils.Dict) {
 // 玩家出牌
 func ReqZPlayCards(zClient *ZMQClient, data utils.Dict) {
 	ReqZNotify(zClient, "ReqPlayCards", data)
+}
+
+// 玩家离开房间
+func ReqZLeaveRoom(zClient *ZMQClient, data utils.Dict) {
+	ReqZNotify(zClient, "ReqLeaveRoom", data)
 }

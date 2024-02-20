@@ -22,10 +22,10 @@ func ReqLogin(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 	if user == nil {
 		user = models.CreateUser(name, password)
 	}
-	if ok := ctx.IsOnline(user.ID); ok {
+	if ok := IsOnline(user.ID); ok {
 		startTime := time.Now()
 		ctx.QuitMessage(user.ID)
-		for ok := ctx.IsOnline(user.ID); ok; ok = ctx.IsOnline(user.ID) {
+		for ok := IsOnline(user.ID); ok; ok = IsOnline(user.ID) {
 			if time.Since(startTime) > 10*time.Second {
 				fmt.Printf("force login: %d", user.ID)
 				break
@@ -34,7 +34,7 @@ func ReqLogin(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 		}
 		user, _ = models.GetUserByName(name, password)
 	}
-	ctx.SetOnline(user.ID)
+	SetOnline(user.ID)
 	ctx.User = user
 
 	LoginLoadData(ctx)

@@ -17,7 +17,7 @@ type UserModel struct {
 	LastLogin  time.Time
 	Coin       uint64
 	Avatar     string
-	RoomID     uint16
+	RoomID     uint32
 }
 
 // 是否是新用户

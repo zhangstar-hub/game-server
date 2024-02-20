@@ -12,4 +12,5 @@ var ZMQRouters = map[string]viewFunction{
 	"ReqZPlayCards":   ReqZPlayCards,
 	"ReqZEnterRoom":   ReqZEnterRoom,
 	"ReqZCallScore":   ReqZCallScore,
+	"ReqZLeaveRoom":   ReqZLeaveRoom,
 }

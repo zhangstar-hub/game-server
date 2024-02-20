@@ -1,65 +1,63 @@
 package src
 
 import (
-	"encoding/json"
 	"errors"
-	"my_app/internal/db"
-	"my_app/internal/models"
 	"my_app/internal/utils"
 
 	"github.com/thoas/go-funk"
 )
 
 type Player struct {
-	Table *models.PlayerModel
-	Cards []Card
-	Ctx   *Ctx
+	ID        uint   // 玩家ID
+	Cards     []Card // 拥有的手牌
+	DeskID    int    // 座位号 0/1/2
+	Role      int    // 角色 1：农民 2：地主
+	Ready     bool   // 是否准备
+	IsWin     bool   // 是否胜利
+	CallScore int    // 叫分
+	Coin      uint64 //玩家的金币数量
+	Name      uint64 //玩家的名字
 }
 
-// 初始数据
-func PlayerInitData() models.PlayerModel {
-	return models.PlayerModel{
-		Cards:     "[]",
-		Ready:     false,
-		Role:      1,
-		RoomID:    0,
-		DeskID:    0,
-		CallScore: 0,
-	}
-}
-
-// 加载数据
+// 获取玩家数据
 func PlayerLoadData(ctx *Ctx) {
-	Table := &models.PlayerModel{
-		ID: ctx.User.ID,
+	var player *Player
+	if ctx.User.RoomID != 0 {
+		if ok, r := ctx.RoomManager.GetRoom(ctx); ok {
+			for _, p := range r.Players {
+				if p.ID == ctx.User.ID {
+					continue
+				}
+				player = p
+				break
+			}
+		}
+	} else {
+		player = &Player{
+			ID:        ctx.User.ID,
+			Cards:     []Card{},
+			DeskID:    0,
+			Role:      1,
+			Ready:     false,
+			CallScore: 0,
+		}
 	}
-	db.DB.Attrs(PlayerInitData()).FirstOrInit(Table)
-	ctx.Player = &Player{
-		Table: Table,
-		Ctx:   ctx,
-		Cards: []Card{},
-	}
-	json.Unmarshal([]byte(ctx.Player.Table.Cards), ctx.Player.Cards)
-}
-
-// 保存数据
-func (p *Player) Save() error {
-	return db.DB.Save(p.Table).Error
+	ctx.Player = player
 }
 
 // 准备
 func (p *Player) SetReady(status bool) {
-	p.Table.Ready = status
+	p.Ready = status
 }
 
 // 叫分
 func (p *Player) Call(score int) {
-	p.Table.CallScore = score
+	p.CallScore = score
 }
 
 // 身份确认
 func (p *Player) ConfirmRole(role int) {
-	p.Table.Role = role
+	p.Role = role
 }
 
 // 打牌
@@ -75,21 +73,18 @@ func (p *Player) PlayCards(cards []Card) {
 // 重置对局
 func (p *Player) Reset() {
 	p.Cards = []Card{}
-	p.Table.Ready = false
-	p.Table.Role = 1
-	p.Table.CallScore = 0
-	p.Table.RoomID = 0
-	p.Table.Cards = "[]"
+	p.Ready = false
+	p.Role = 1
+	p.CallScore = 0
 }
 
 // 数据获取
 func (p *Player) GetRet() (ret utils.Dict) {
 	ret = utils.Dict{
 		"cards": p.Cards,
-		"role":  p.Table.Role,
-		"score": p.Table.CallScore,
-		"ready": p.Table.Ready,
-		"room":  p.Table.RoomID,
+		"role":  p.Role,
+		"score": p.CallScore,
+		"ready": p.Ready,
 	}
 	return ret
 }

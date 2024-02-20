@@ -40,12 +40,24 @@ func NewZMQClient(ctxMap *sync.Map, roomManager *src.RoomManager) *ZMQClient {
 }
 
 // 向中心服务器发送数据
-func (z *ZMQClient) Send(data map[string]interface{}) (int, error) {
+func (z *ZMQClient) Send(data utils.Dict) (int, error) {
 	json, err := json.Marshal(data)
 	if err != nil {
 		return 0, err
 	}
 	return z.client.SendBytes(json, 0)
+}
+
+// 消息发送模板
+func (z *ZMQClient) SendMessage(cmd string, form_uid uint, to_uid_list []uint, message utils.Dict) {
+	z.Send(utils.Dict{
+		"cmd": cmd,
+		"data": utils.Dict{
+			"form_uid":    form_uid,
+			"to_uid_list": to_uid_list,
+			"message":     message,
+		},
+	})
 }
 
 // 从中心服务器接受数据
