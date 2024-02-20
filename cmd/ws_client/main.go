@@ -221,6 +221,11 @@ func main() {
 					"score": 3,
 				},
 			}
+		case 13:
+			data = map[string]interface{}{
+				"cmd":  "ReqPlayCards",
+				"data": map[string]interface{}{},
+			}
 		}
 
 		// 发送 JSON 数据

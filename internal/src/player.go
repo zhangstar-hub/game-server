@@ -63,12 +63,13 @@ func (p *Player) ConfirmRole(role int) {
 }
 
 // 打牌
-func (p *Player) PlayCard(cards []Card) error {
-	if funk.Every(p.Cards, cards) == false {
-		return errors.New("play card error")
+func (p *Player) PlayCards(cards []Card) {
+	for _, card := range cards {
+		if !funk.Contains(p.Cards, card) {
+			panic(errors.New("play card error"))
+		}
 	}
 	p.Cards = funk.Join(p.Cards, cards, funk.LeftJoin).([]Card)
-	return nil
 }
 
 // 重置对局

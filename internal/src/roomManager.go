@@ -2,8 +2,10 @@ package src
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"my_app/internal/utils"
+	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -150,7 +152,7 @@ func ReqRoomReady(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 	ctx.Player.SetReady(is_ready)
 
 	if room.ReadyCheck() {
-		room.PlayInit()
+		room.StartPlay()
 	}
 	// 提示其他玩家 我做好准备了
 	ctx.ZClient.Send(utils.Dict{
@@ -231,18 +233,33 @@ func ReqGetRole(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 func ReqPlayCards(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 	ret = make(utils.Dict)
 	cards := []Card{}
-	for _, v := range data["cards"].([]utils.Dict) {
-		cards = append(cards, Card{
-			Suit:  v["Suit"].(string),
-			Value: v["Value"].(string),
-		})
+	// for _, v := range data["cards"].([]utils.Dict) {
+	// 	cards = append(cards, Card{
+	// 		Suit:  v["Suit"].(string),
+	// 		Value: v["Value"].(string),
+	// 	})
+	// }
+
+	// temp
+	file, err := os.Open("configs/cards.json")
+	if err != nil {
+		fmt.Println("无法打开文件:", err)
+		return
 	}
+	defer file.Close()
+	decoder := json.NewDecoder(file)
+	if err := decoder.Decode(&cards); err != nil {
+		fmt.Println("解码 JSON 失败:", err)
+		return
+	}
+	// temp
+
 	ok, r := ctx.RoomManager.GetRoom(ctx)
 	if !ok {
 		ret["message"] = "not in room"
 		return ret
 	}
-	r.PlayCard(ctx.Player, cards)
+	r.PlayCards(ctx.Player, cards)
 	ret["cards"] = ctx.Player.Cards
 
 	// 提示其他玩家 我的出牌

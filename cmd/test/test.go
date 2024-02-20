@@ -1,5 +1,7 @@
 package main
 
+import "fmt"
+
 const (
 	Unknown           = iota // 未知牌型
 	Single                   // 单张
@@ -23,5 +25,9 @@ func main() {
 		print("case 1:\n")
 	case 1:
 		print("case 2:\n")
+	}
+	b := []string{"1", "2", "3", "4", "5"}
+	for _, i := range b {
+		fmt.Printf("i: %v\n", i)
 	}
 }

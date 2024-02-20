@@ -318,11 +318,17 @@ func CardsType(cards []Card) int {
 
 // 是否有效的出牌
 func IsValidPlay(bCards []Card, cards []Card) bool {
+	cardType := CardsType(cards)
+	beforeCardType := CardsType(bCards)
+	if len(cards) == 0 {
+		return true
+	}
+	if cardType == Unknown {
+		return false
+	}
 	if len(bCards) == 0 {
 		return true
 	}
-	beforeCardType := CardsType(bCards)
-	cardType := CardsType(cards)
 	if cardType != beforeCardType && (cardType != Bomb || cardType != KingBomb) {
 		return false
 	}

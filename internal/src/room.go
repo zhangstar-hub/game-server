@@ -10,20 +10,21 @@ import (
 
 // 房间
 type Room struct {
-	ID           int32        // 房间ID
-	BeforeCards  []Card       // 上一次出牌
-	Cards        []Card       // 桌面上的纸牌
-	Players      [3]*Player   // 玩家
-	Score        uint64       // 分数
-	CoinPool     uint64       //	奖池
-	mu           sync.RWMutex // 一个锁
-	IsOver       bool         // 游戏是否结束
-	IsFull       bool         // 是否满房了
-	IsClosed     bool         // 房间是否关闭
-	winRole      int          // 胜利的角色
-	CallDeskID   int          // 出手座位号
-	CallScoreNum int          // 叫分次数
-	MaxCallSocre int          // 叫分最大数
+	ID             int32        // 房间ID
+	BeforeCards    []Card       // 上一次出牌
+	BeforePlayDesk int          // 上一次出牌的位置
+	Cards          []Card       // 桌面上的纸牌
+	Players        [3]*Player   // 玩家
+	Score          uint64       // 分数
+	CoinPool       uint64       //	奖池
+	mu             sync.RWMutex // 一个锁
+	IsOver         bool         // 游戏是否结束
+	IsFull         bool         // 是否满房了
+	IsClosed       bool         // 房间是否关闭
+	winRole        int          // 胜利的角色
+	CallDeskID     int          // 出手座位号
+	CallScoreNum   int          // 叫分次数
+	MaxCallSocre   int          // 叫分最大数
 }
 
 func NewRoom() *Room {
@@ -52,7 +53,7 @@ func (r *Room) PlayerNum() int {
 }
 
 // 出手流转
-func (r *Room) ConvertCall() {
+func (r *Room) CallConvert() {
 	r.CallDeskID = (r.CallDeskID + 1) % 3
 }
 
@@ -124,7 +125,7 @@ func (r *Room) ReadyCheck() bool {
 }
 
 // 初始化
-func (r *Room) PlayInit() {
+func (r *Room) StartPlay() {
 	r.CallDeskID = rand.Intn(3)
 
 	// 发牌
@@ -166,20 +167,26 @@ func ShuffleDeck(deck []Card) {
 }
 
 // 出牌
-func (r *Room) PlayCard(p *Player, cards []Card) error {
+func (r *Room) PlayCards(p *Player, cards []Card) {
+	if r.BeforePlayDesk == r.CallDeskID {
+		r.BeforeCards = r.BeforeCards[:0]
+	}
 	if !IsValidPlay(r.BeforeCards, cards) {
-		return errors.New("invalid cards")
+		panic(errors.New("can't play cards"))
 	}
 	if r.CallDeskID != p.Table.DeskID {
-		return errors.New("you can't play")
+		panic(errors.New("not your turn"))
 	}
-	p.PlayCard(cards)
+	p.PlayCards(cards)
 	if len(p.Cards) <= 0 {
 		r.winRole = p.Table.Role
 		r.GameOver()
 	}
-	r.ConvertCall()
-	return nil
+	if len(cards) > 0 {
+		r.BeforePlayDesk = r.CallDeskID
+	}
+	r.BeforeCards = cards
+	r.CallConvert()
 }
 
 // 结算
