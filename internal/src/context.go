@@ -3,7 +3,6 @@ package src
 import (
 	"fmt"
 	"my_app/internal/db"
-	"my_app/internal/models"
 	"my_app/internal/utils"
 	"reflect"
 	"time"
@@ -11,7 +10,7 @@ import (
 
 type ZMQInterface interface {
 	Send(message map[string]interface{}) (int, error)
-	SendMessage(cmd string, form_uid uint, to_uid_list []uint, message utils.Dict)
+	BroastMessage(cmd string, form_uid uint, to_uid_list []uint, message utils.Dict)
 	Recv() ([]byte, error)
 }
 
@@ -32,7 +31,7 @@ type Ctx struct {
 	Token          string        // 登录产生的唯一ID
 	ZClient        ZMQInterface  // zmq消息发送器
 
-	User        *models.UserModel
+	User        *User
 	LoginBonus  *LoginBonus
 	Player      *Player
 	RoomManager *RoomManager
@@ -40,7 +39,7 @@ type Ctx struct {
 
 // 玩家退出清理
 func (ctx *Ctx) Close() {
-	if ok, r := ctx.RoomManager.GetRoom(ctx); ok {
+	if ok, r := ctx.RoomManager.GetRoom(ctx.User.RoomID, ctx.User.ID); ok {
 		r.LeaveRoom(ctx)
 	}
 	ctx.SaveAll()

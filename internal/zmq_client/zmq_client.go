@@ -48,8 +48,8 @@ func (z *ZMQClient) Send(data utils.Dict) (int, error) {
 	return z.client.SendBytes(json, 0)
 }
 
-// 消息发送模板
-func (z *ZMQClient) SendMessage(cmd string, form_uid uint, to_uid_list []uint, message utils.Dict) {
+// 消息定向广播
+func (z *ZMQClient) BroastMessage(cmd string, form_uid uint, to_uid_list []uint, message utils.Dict) {
 	z.Send(utils.Dict{
 		"cmd": cmd,
 		"data": utils.Dict{

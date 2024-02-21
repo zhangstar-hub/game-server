@@ -16,7 +16,7 @@ func ReqTest(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 
 func ReqAddCoin(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 	ret = make(utils.Dict)
-	ctx.User.Coin += uint64(data["coin"].(float64))
+	AddCoin(ctx.User.ID, int64(data["coin"].(float64)))
 	ret["coin"] = ctx.User.Coin
 	return ret
 }

@@ -2,7 +2,6 @@ package src
 
 import (
 	"fmt"
-	"my_app/internal/models"
 	"my_app/internal/utils"
 	"strings"
 	"time"
@@ -14,13 +13,13 @@ func ReqLogin(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 	fmt.Printf("data: %v\n", data)
 	name := strings.TrimSpace(data["name"].(string))
 	password := strings.TrimSpace(data["password"].(string))
-	user, err := models.GetUserByName(name, password)
+	user, err := GetUserByName(name, password)
 	if err != nil {
 		ret["error"] = err.Error()
 		return ret
 	}
 	if user == nil {
-		user = models.CreateUser(name, password)
+		user = CreateUser(name, password)
 	}
 	if ok := IsOnline(user.ID); ok {
 		startTime := time.Now()
@@ -32,7 +31,7 @@ func ReqLogin(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 			}
 			time.Sleep(200 * time.Millisecond)
 		}
-		user, _ = models.GetUserByName(name, password)
+		user, _ = GetUserByName(name, password)
 	}
 	SetOnline(user.ID)
 	ctx.User = user

@@ -13,26 +13,25 @@ type Player struct {
 	DeskID    int    // 座位号 0/1/2
 	Role      int    // 角色 1：农民 2：地主
 	Ready     bool   // 是否准备
-	IsWin     bool   // 是否胜利
 	CallScore int    // 叫分
-	Coin      uint64 //玩家的金币数量
-	Name      uint64 //玩家的名字
+	Name      string //玩家的名字
 }
 
 // 获取玩家数据
 func PlayerLoadData(ctx *Ctx) {
 	var player *Player
 	if ctx.User.RoomID != 0 {
-		if ok, r := ctx.RoomManager.GetRoom(ctx); ok {
+		if ok, r := ctx.RoomManager.GetRoom(ctx.User.RoomID, ctx.User.ID); ok {
 			for _, p := range r.Players {
-				if p.ID == ctx.User.ID {
+				if p.ID != ctx.User.ID {
 					continue
 				}
 				player = p
 				break
 			}
 		}
-	} else {
+	}
+	if player == nil {
 		player = &Player{
 			ID:        ctx.User.ID,
 			Cards:     []Card{},
@@ -40,6 +39,7 @@ func PlayerLoadData(ctx *Ctx) {
 			Role:      1,
 			Ready:     false,
 			CallScore: 0,
+			Name:      ctx.User.Name,
 		}
 	}
 	ctx.Player = player

@@ -12,35 +12,39 @@ import (
 // 房间
 type Room struct {
 	ID             uint32       // 房间ID
+	ZClient        ZMQInterface // 广播器
 	BeforeCards    []Card       // 上一次出牌
 	BeforePlayDesk int          // 上一次出牌的位置
 	Cards          []Card       // 桌面上的纸牌
 	Players        [3]*Player   // 玩家
-	Score          uint64       // 分数
-	CoinPool       uint64       //	奖池
+	Score          int64        // 分数
+	Mutil          int          // 倍数
 	mu             sync.RWMutex // 一个锁
-	GameStatus     int          // 游戏状态 0：准备 1:进行
+	GameStatus     int          // 游戏状态 0：准备 1:叫分 2:进行
 	IsFull         bool         // 是否满房了
 	IsClosed       bool         // 房间是否关闭
+	IsSpring       bool         // 是否是春天
 	winRole        int          // 胜利的角色
 	CallDeskID     int          // 出手座位号
 	CallScoreNum   int          // 叫分次数
 	MaxCallSocre   int          // 叫分最大数
-	ZClient        ZMQInterface // 广播器
+
+	SettleInfo utils.Dict // 结算信息
 }
 
 func NewRoom(ZClient ZMQInterface) *Room {
 	return &Room{
 		Cards:      NewCards(),
 		Players:    [3]*Player{},
-		Score:      0,
-		CoinPool:   0,
+		Score:      1,
 		mu:         sync.RWMutex{},
 		GameStatus: 0,
 		IsFull:     false,
 		IsClosed:   false,
+		IsSpring:   true,
 		winRole:    0,
 		ZClient:    ZClient,
+		SettleInfo: utils.Dict{},
 	}
 }
 
@@ -61,7 +65,7 @@ func (r *Room) CallConvert() {
 }
 
 // 获取房间中玩家ID
-func (r *Room) PlayerIds(exculdeId uint) []uint {
+func (r *Room) PlayerIds(exculdeID uint) []uint {
 	ids := make([]uint, 0)
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -69,7 +73,7 @@ func (r *Room) PlayerIds(exculdeId uint) []uint {
 		if v == nil {
 			continue
 		}
-		if v.ID == exculdeId {
+		if v.ID == exculdeID {
 			continue
 		}
 		ids = append(ids, v.ID)
@@ -89,8 +93,8 @@ func (r *Room) EnterRoom(p *Player) bool {
 	}
 	for i := 0; i < len(r.Players); i++ {
 		if r.Players[i] == nil {
-			r.Players[i] = p
 			p.DeskID = i
+			r.Players[i] = p
 			break
 		}
 	}
@@ -102,13 +106,13 @@ func (r *Room) EnterRoom(p *Player) bool {
 
 // 离开房间 主动离开
 func (r *Room) LeaveRoom(ctx *Ctx) {
-	if r.GameStatus == 1 {
+	if r.GameStatus != 0 {
 		return
 	}
 
 	r.mu.Lock()
 	for i, v := range r.Players {
-		if v.ID == ctx.Player.ID {
+		if v != nil && v.ID == ctx.Player.ID {
 			ctx.Player.Reset()
 			ctx.User.RoomID = 0
 			r.Players[i] = nil
@@ -117,12 +121,12 @@ func (r *Room) LeaveRoom(ctx *Ctx) {
 		}
 	}
 	r.mu.Unlock()
-	r.ZClient.SendMessage("ReqZLeaveRoom", ctx.Player.ID, r.PlayerIds(ctx.Player.ID), utils.Dict{})
+	r.ZClient.BroastMessage("ReqZLeaveRoom", ctx.Player.ID, r.PlayerIds(ctx.Player.ID), utils.Dict{})
 }
 
 // 清理房间
 func (r *Room) ClearRoom() {
-	if r.GameStatus == 1 {
+	if r.GameStatus != 0 {
 		return
 	}
 	r.mu.Lock()
@@ -139,7 +143,7 @@ func (r *Room) ClearRoom() {
 	}
 	r.mu.Unlock()
 	for _, v := range leaveIds {
-		r.ZClient.SendMessage("ReqZLeaveRoom", v, aliveIds, utils.Dict{})
+		r.ZClient.BroastMessage("ReqZLeaveRoom", v, aliveIds, utils.Dict{})
 	}
 
 }
@@ -160,6 +164,7 @@ func (r *Room) ReadyCheck() bool {
 func (r *Room) StartPlay() {
 	r.GameStatus = 1
 	r.CallDeskID = rand.Intn(3)
+	r.SettleInfo = utils.Dict{}
 	// 发牌
 	for i := 0; i < len(r.Players); i++ {
 		r.Players[i].Cards = append([]Card{}, r.Cards[i*17:(i+1)*17]...)
@@ -171,8 +176,6 @@ func (r *Room) StartPlay() {
 
 // 叫分
 func (r *Room) CallScore(p *Player, score int) {
-	fmt.Printf("p.DeskID: %v\n", p.DeskID)
-	fmt.Printf("r.CallDeskID: %v\n", r.CallDeskID)
 	if p.DeskID != r.CallDeskID {
 		panic(errors.New("you can't call score"))
 	}
@@ -181,75 +184,97 @@ func (r *Room) CallScore(p *Player, score int) {
 		r.MaxCallSocre = score
 	}
 	r.CallScoreNum += 1
+	if r.CallScoreNum >= 3 || score == 3 {
+		r.GameStatus = 2
+	}
+	r.Mutil = score
 }
 
 // 身份确认
 func (r *Room) ConfirmRole() {
-	for i, v := range r.Players {
+	for _, v := range r.Players {
 		if v.CallScore == r.MaxCallSocre {
 			v.ConfirmRole(2)
-			r.CallDeskID = i
 		} else {
 			v.ConfirmRole(1)
 		}
 	}
 }
 
-// 洗牌
-func ShuffleDeck(deck []Card) {
-	rand.Shuffle(len(deck), func(i, j int) { deck[i], deck[j] = deck[j], deck[i] })
-}
-
 // 出牌
-func (r *Room) PlayCards(p *Player, cards []Card) {
-	if r.BeforePlayDesk == r.CallDeskID {
-		r.BeforeCards = r.BeforeCards[:0]
-	}
-	if !IsValidPlay(r.BeforeCards, cards) {
-		panic(errors.New("can't play cards"))
-	}
-	fmt.Printf("r.CallDeskID: %v\n", r.CallDeskID)
-	fmt.Printf("p.DeskID: %v\n", p.DeskID)
+func (r *Room) PlayCards(p *Player, cards []Card) CardsType {
+	// if !IsValidPlay(r.BeforeCards, cards) {
+	// 	panic(errors.New("can't play cards"))
+	// }
+	// if r.BeforePlayDesk == p.DeskID && len(cards) == 0 {
+	// 	panic(errors.New("your cards are empty"))
+	// }
 	if r.CallDeskID != p.DeskID {
 		panic(errors.New("not your turn"))
 	}
-	p.PlayCards(cards)
-	if len(p.Cards) <= 0 {
-		r.winRole = p.Role
-		r.GameOver()
+	cardsType := GetCardsType(cards)
+	if cardsType == Bomb || cardsType == KingBomb {
+		r.Mutil += 2
 	}
+
+	p.PlayCards(cards)
 	if len(cards) > 0 {
 		r.BeforePlayDesk = r.CallDeskID
+		if !(r.IsSpring && p.Role == 2) {
+			r.IsSpring = false
+		}
 	}
 	r.BeforeCards = cards
 	r.CallConvert()
+
+	if len(p.Cards) <= 0 {
+		r.winRole = p.Role
+		if r.IsSpring {
+			r.Score *= 2
+			r.Mutil += 2
+		}
+		r.GameOver()
+	}
+	return cardsType
 }
 
 // 结算
 func (r *Room) Settle() {
+	var CoinPool int64
+	playerInfo := utils.Dict{}
 	for _, p := range r.Players {
-		p.IsWin = r.winRole == p.Role
-		if p.IsWin == false {
-			var bet uint64
+		if r.winRole != p.Role {
+			var c int64
 			if r.winRole == 1 {
-				bet = utils.MaxUint64(p.Coin, uint64(r.Score))
+				c = utils.Minint64(GetCoin(p.ID), r.Score)
 			} else {
-				bet = utils.MaxUint64(p.Coin, uint64(r.Score*2))
+				c = utils.Minint64(GetCoin(p.ID), r.Score*2)
 			}
-			r.CoinPool += bet
-			p.Coin -= bet
+			CoinPool += c
+			AddCoin(p.ID, -c)
+			playerInfo[fmt.Sprintf("%d", p.ID)] = utils.Dict{
+				"winCoins": -c,
+			}
 		}
 	}
 
 	for _, p := range r.Players {
-		if p.IsWin == true {
+		if r.winRole == p.Role {
+			var c int64
 			if p.Role == 1 {
-				p.Coin += r.CoinPool / 2
+				c += CoinPool / 2
 			} else {
-				p.Coin += r.CoinPool
+				c += CoinPool
+			}
+			AddCoin(p.ID, c)
+			playerInfo[fmt.Sprintf("%d", p.ID)] = utils.Dict{
+				"winCoins": c,
 			}
 		}
 	}
+	r.SettleInfo["player_info"] = playerInfo
+	r.SettleInfo["win_role"] = r.winRole
+	r.SettleInfo["multi"] = r.Mutil
 }
 
 // 游戏结束
@@ -285,6 +310,7 @@ func (r *Room) GetRet(p *Player) utils.Dict {
 		"game_status": r.GameStatus,
 		"win_role":    r.winRole,
 		"score":       r.Score,
+		"call_desk":   r.CallDeskID,
 	}
 
 	ret["myInfo"] = utils.Dict{
@@ -298,7 +324,7 @@ func (r *Room) GetRet(p *Player) utils.Dict {
 			pInfo["role"] = p.Role
 			pInfo["is_ready"] = p.Ready
 			pInfo["card_num"] = len(p.Cards)
-			pInfo["coin"] = p.Coin
+			pInfo["coin"] = GetCoin(p.ID)
 			pInfo["name"] = p.Name
 		}
 		playersInfo = append(playersInfo, pInfo)

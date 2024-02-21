@@ -4,20 +4,22 @@ import (
 	"sort"
 )
 
+type CardsType = int
+
 const (
-	Unknown           = iota // 未知牌型
-	Single                   // 单张
-	Pair                     // 对子
-	Three                    // 三张
-	Straight                 // 顺子
-	PairStraight             // 连对
-	ThreeWithOne             // 三带一
-	ThreeWithTwo             // 三带二
-	Bomb                     // 炸弹
-	KingBomb                 // 王炸
-	PlaneWithoutWings        // 飞机不带翅膀
-	PlaneWithSingle          // 飞机带单牌
-	PlaneWithPair            // 飞机带对子
+	Unknown           CardsType = iota // 未知牌型
+	Single                             // 单张
+	Pair                               // 对子
+	Three                              // 三张
+	Straight                           // 顺子
+	PairStraight                       // 连对
+	ThreeWithOne                       // 三带一
+	ThreeWithTwo                       // 三带二
+	Bomb                               // 炸弹
+	KingBomb                           // 王炸
+	PlaneWithoutWings                  // 飞机不带翅膀
+	PlaneWithSingle                    // 飞机带单牌
+	PlaneWithPair                      // 飞机带对子
 )
 
 var CardWeight = map[string]int{
@@ -278,7 +280,7 @@ func isPlaneWithPair(cards []Card) bool {
 }
 
 // 判读出牌类型
-func CardsType(cards []Card) int {
+func GetCardsType(cards []Card) CardsType {
 	switch len(cards) {
 	case 1: // 单张
 		return Single
@@ -318,8 +320,8 @@ func CardsType(cards []Card) int {
 
 // 是否有效的出牌
 func IsValidPlay(bCards []Card, cards []Card) bool {
-	cardType := CardsType(cards)
-	beforeCardType := CardsType(bCards)
+	cardType := GetCardsType(cards)
+	beforeCardType := GetCardsType(bCards)
 	if len(cards) == 0 {
 		return true
 	}

@@ -91,10 +91,9 @@ func (rm *RoomManager) Close() error {
 }
 
 // 获取玩家存在的房间
-func (rm *RoomManager) GetRoom(ctx *Ctx) (bool, *Room) {
-	r, ok := rm.Rooms.Load(ctx.User.RoomID)
-	if !ok || r.(*Room).InRoom(ctx.User.ID) == false {
-		ctx.Player.Reset()
+func (rm *RoomManager) GetRoom(roomID uint32, uid uint) (bool, *Room) {
+	r, ok := rm.Rooms.Load(roomID)
+	if !ok || r.(*Room).InRoom(uid) == false {
 		return false, nil
 	}
 	return true, r.(*Room)
@@ -107,7 +106,7 @@ func ReqEnterRoom(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 	var room *Room
 	if ctx.User.RoomID > 0 {
 		r, ok := ctx.RoomManager.Rooms.Load(ctx.User.RoomID)
-		if !ok || r.(*Room).InRoom(ctx.User.ID) == false {
+		if !ok || !r.(*Room).InRoom(ctx.User.ID) {
 			ctx.Player.Reset()
 		} else {
 			room = r.(*Room)
@@ -115,20 +114,21 @@ func ReqEnterRoom(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 	}
 	if room == nil {
 		room = ctx.RoomManager.EnterRoom(ctx)
-
-		// 提示其他玩家 有新玩家进入
-		ctx.ZClient.SendMessage(
-			"ReqZEnterRoom",
-			ctx.User.ID,
-			room.PlayerIds(ctx.User.ID),
-			utils.Dict{
-				"uid":  ctx.User.ID,
-				"role": ctx.Player.Role,
-				"coin": ctx.User.Coin,
-				"name": ctx.User.Name,
-			},
-		)
 	}
+
+	// 提示其他玩家 有新玩家进入
+	ctx.ZClient.BroastMessage(
+		"ReqZEnterRoom",
+		ctx.User.ID,
+		room.PlayerIds(ctx.User.ID),
+		utils.Dict{
+			"uid":  ctx.User.ID,
+			"role": ctx.Player.Role,
+			"coin": ctx.User.Coin,
+			"name": ctx.User.Name,
+		},
+	)
+	fmt.Printf("ctx.Player.DeskID: %v\n", ctx.Player.DeskID)
 	ret["room"] = room.GetRet(ctx.Player)
 	return ret
 }
@@ -138,7 +138,7 @@ func ReqRoomReady(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 	ret = make(utils.Dict)
 	is_ready := data["is_ready"].(bool)
 	fmt.Printf("ctx.Player.Table.ID: %v\n", ctx.User.ID)
-	ok, room := ctx.RoomManager.GetRoom(ctx)
+	ok, room := ctx.RoomManager.GetRoom(ctx.User.RoomID, ctx.User.ID)
 	if !ok {
 		ret["error"] = "not in room"
 		return ret
@@ -154,7 +154,7 @@ func ReqRoomReady(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 		room.StartPlay()
 	}
 	// 提示其他玩家 我做好准备了
-	ctx.ZClient.SendMessage(
+	ctx.ZClient.BroastMessage(
 		"ReqZRoomReady",
 		ctx.User.ID,
 		room.PlayerIds(ctx.User.ID),
@@ -170,7 +170,7 @@ func ReqRoomReady(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 // 看牌
 func ReqWatchCards(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 	ret = make(utils.Dict)
-	ok, _ := ctx.RoomManager.GetRoom(ctx)
+	ok, _ := ctx.RoomManager.GetRoom(ctx.User.RoomID, ctx.User.ID)
 	if !ok {
 		ret["error"] = "not in room"
 		return ret
@@ -187,10 +187,17 @@ func ReqCallScore(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 		ret["error"] = "score must be between 1 and 3"
 		return
 	}
-	ok, r := ctx.RoomManager.GetRoom(ctx)
+	ok, r := ctx.RoomManager.GetRoom(ctx.User.RoomID, ctx.User.ID)
 	if !ok {
 		ret["error"] = "not in room"
 		return ret
+	}
+	if r.GameStatus != 1 {
+		ret["error"] = "can't call score"
+		return
+	}
+	if score <= r.MaxCallSocre {
+		ret["error"] = "must geater than before call score"
 	}
 	r.CallScore(ctx.Player, score)
 	callEnd := score == 3 || r.CallScoreNum == 3
@@ -200,13 +207,14 @@ func ReqCallScore(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 		r.CallConvert()
 	}
 	// 提示其他玩家 我的叫分
-	ctx.ZClient.SendMessage(
+	ctx.ZClient.BroastMessage(
 		"ReqZCallScore",
 		ctx.User.ID,
 		r.PlayerIds(ctx.User.ID),
 		utils.Dict{
-			"score":    score,
-			"call_end": callEnd,
+			"score":     score,
+			"call_end":  callEnd,
+			"call_desk": r.CallDeskID,
 		},
 	)
 	ret["call_end"] = callEnd
@@ -216,7 +224,7 @@ func ReqCallScore(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 // 获取身份
 func ReqGetRole(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 	ret = make(utils.Dict)
-	ok, _ := ctx.RoomManager.GetRoom(ctx)
+	ok, _ := ctx.RoomManager.GetRoom(ctx.User.RoomID, ctx.User.ID)
 	if !ok {
 		ret["error"] = "not in room"
 		return ret
@@ -250,23 +258,30 @@ func ReqPlayCards(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 	}
 	// temp
 
-	ok, r := ctx.RoomManager.GetRoom(ctx)
+	ok, r := ctx.RoomManager.GetRoom(ctx.User.RoomID, ctx.User.ID)
 	if !ok {
 		ret["message"] = "not in room"
 		return ret
 	}
-	r.PlayCards(ctx.Player, cards)
+	cardsType := r.PlayCards(ctx.Player, cards)
 	ret["cards"] = ctx.Player.Cards
+	ret["cards_type"] = cardsType
 
+	b_ret := utils.Dict{
+		"cards":      cards,
+		"card_num":   len(ctx.Player.Cards),
+		"win_role":   r.winRole,
+		"cards_type": cardsType,
+	}
+	if len(ctx.Player.Cards) == 0 {
+		ret["settle_info"], r.SettleInfo = r.SettleInfo, utils.Dict{}
+	}
 	// 提示其他玩家 我的出牌
-	ctx.ZClient.SendMessage(
+	ctx.ZClient.BroastMessage(
 		"ReqZPlayCards",
 		ctx.User.ID,
 		r.PlayerIds(ctx.User.ID),
-		utils.Dict{
-			"cards":    cards,
-			"card_num": len(ctx.Player.Cards),
-		},
+		b_ret,
 	)
 	return ret
 }

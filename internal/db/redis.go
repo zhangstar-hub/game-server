@@ -173,6 +173,12 @@ func (r *Redis) Incr(key string) (int64, error) {
 	return r.client.Incr(ctx, key).Result()
 }
 
+// Incr 对键进行增加操作
+func (r *Redis) IncrBy(key string, value int64) (int64, error) {
+	ctx := context.Background()
+	return r.client.IncrBy(ctx, key, value).Result()
+}
+
 // Exists 检查指定键是否存在于数据库中
 func (r *Redis) Exists(key string) (int64, error) {
 	ctx := context.Background()

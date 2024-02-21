@@ -134,6 +134,7 @@ func main() {
 		10:ReqGetRole
 		11:ReqCallScore 2
 		12:ReqCallScore 3
+		13:ReqPlayCards
 		`)
 		fmt.Scanln(&n)
 		var data map[string]interface{}

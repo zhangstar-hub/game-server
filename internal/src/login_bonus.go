@@ -64,7 +64,7 @@ func (c *LoginBonus) LoginCheck(ctx *Ctx, ret utils.Dict) {
 	if isNewDay {
 		c.DailyFlushTime = utils.TomorrowFlushTime()
 		add_coins := cfg.LoginBonus.DailyRewards[c.SiginTimes]
-		ctx.User.Coin += uint64(add_coins)
+		ctx.User.Coin += int64(add_coins)
 		c.SiginTimes += 1
 		LoginBonusRet["reawrds"] = utils.Dict{
 			"add_coins": add_coins,
