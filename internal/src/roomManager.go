@@ -64,10 +64,12 @@ func (rm *RoomManager) AutoClearRoom() {
 			closeRooms := []*Room{}
 			rm.Rooms.Range(func(key, value any) bool {
 				r := value.(*Room)
-				if len(r.Players) == 0 {
+				r.mu.Lock()
+				if r.PlayerNum() == 0 {
 					r.Close()
 					closeRooms = append(closeRooms, r)
 				}
+				r.mu.Unlock()
 				return true
 			})
 			for _, r := range closeRooms {
@@ -93,7 +95,7 @@ func (rm *RoomManager) Close() error {
 // 获取玩家存在的房间
 func (rm *RoomManager) GetRoom(roomID uint32, uid uint) (bool, *Room) {
 	r, ok := rm.Rooms.Load(roomID)
-	if !ok || r.(*Room).InRoom(uid) == false {
+	if !ok || !r.(*Room).InRoom(uid) {
 		return false, nil
 	}
 	return true, r.(*Room)
@@ -266,16 +268,15 @@ func ReqPlayCards(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 	cardsType := r.PlayCards(ctx.Player, cards)
 	ret["cards"] = ctx.Player.Cards
 	ret["cards_type"] = cardsType
-
-	b_ret := utils.Dict{
-		"cards":      cards,
-		"card_num":   len(ctx.Player.Cards),
-		"win_role":   r.winRole,
-		"cards_type": cardsType,
-	}
 	if len(ctx.Player.Cards) == 0 {
 		ret["settle_info"], r.SettleInfo = r.SettleInfo, utils.Dict{}
+		ret["win_role"] = r.winRole
+		ret["is_spring"] = r.IsSpring
 	}
+	b_ret := utils.Dict{
+		"card_num": len(ctx.Player.Cards),
+	}
+	utils.MergeMaps(b_ret, ret)
 	// 提示其他玩家 我的出牌
 	ctx.ZClient.BroastMessage(
 		"ReqZPlayCards",

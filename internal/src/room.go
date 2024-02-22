@@ -67,8 +67,6 @@ func (r *Room) CallConvert() {
 // 获取房间中玩家ID
 func (r *Room) PlayerIds(exculdeID uint) []uint {
 	ids := make([]uint, 0)
-	r.mu.RLock()
-	defer r.mu.RUnlock()
 	for _, v := range r.Players {
 		if v == nil {
 			continue
@@ -150,8 +148,6 @@ func (r *Room) ClearRoom() {
 
 // 准备房间中玩家是否全部准备
 func (r *Room) ReadyCheck() bool {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
 	for _, v := range r.Players {
 		if v == nil || !v.Ready {
 			return false
@@ -289,8 +285,6 @@ func (r *Room) GameOver() {
 
 // 关闭房间
 func (r *Room) Close() {
-	r.mu.Lock()
-	defer r.mu.Unlock()
 	r.IsClosed = true
 }
 

@@ -86,7 +86,7 @@ func (s *Server) handleConnection(conn net.Conn) {
 	s.CtxMap.Store(token, ctx)
 	defer s.CtxMap.Delete(token)
 
-	for sc.CloseFlag == false {
+	for !sc.CloseFlag {
 		sc.RequestWait()
 		data, err, de_err := sc.ReadData()
 		if err != nil {

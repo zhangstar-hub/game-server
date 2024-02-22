@@ -10,7 +10,6 @@ import (
 // 登录接口
 func ReqLogin(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 	ret = make(utils.Dict)
-	fmt.Printf("data: %v\n", data)
 	name := strings.TrimSpace(data["name"].(string))
 	password := strings.TrimSpace(data["password"].(string))
 	user, err := GetUserByName(name, password)
