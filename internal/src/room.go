@@ -298,31 +298,28 @@ func (r *Room) InRoom(uid uint) bool {
 	return false
 }
 
+// 玩家信息
+func (r *Room) PlayersInfo() []utils.Dict {
+	players := []utils.Dict{}
+	for _, v := range r.Players {
+		if v == nil {
+			players = append(players, utils.Dict{})
+		} else {
+			players = append(players, v.GetRet())
+		}
+	}
+	return players
+}
+
 func (r *Room) GetRet(p *Player) utils.Dict {
 	ret := utils.Dict{
-		"id":          r.ID,
+		"uid":         p.ID,
+		"room_id":     r.ID,
 		"game_status": r.GameStatus,
-		"win_role":    r.winRole,
 		"score":       r.Score,
 		"call_desk":   r.CallDeskID,
+		"cards":       p.Cards,
 	}
-
-	ret["myInfo"] = utils.Dict{
-		"cards": p.Cards,
-	}
-	playersInfo := make([]utils.Dict, 0)
-	for _, p := range r.Players {
-		pInfo := utils.Dict{}
-		if p != nil {
-			pInfo["id"] = p.ID
-			pInfo["role"] = p.Role
-			pInfo["is_ready"] = p.Ready
-			pInfo["card_num"] = len(p.Cards)
-			pInfo["coin"] = GetCoin(p.ID)
-			pInfo["name"] = p.Name
-		}
-		playersInfo = append(playersInfo, pInfo)
-	}
-	ret["players"] = playersInfo
+	ret["players"] = r.PlayersInfo()
 	return ret
 }

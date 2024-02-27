@@ -14,7 +14,8 @@ type Player struct {
 	Role      int    // 角色 1：农民 2：地主
 	Ready     bool   // 是否准备
 	CallScore int    // 叫分
-	Name      string //玩家的名字
+	Name      string // 玩家的名字
+	Avatar    string // 头像
 }
 
 // 获取玩家数据
@@ -40,6 +41,7 @@ func PlayerLoadData(ctx *Ctx) {
 			Ready:     false,
 			CallScore: 0,
 			Name:      ctx.User.Name,
+			Avatar:    ctx.User.Avatar,
 		}
 	}
 	ctx.Player = player
@@ -81,10 +83,15 @@ func (p *Player) Reset() {
 // 数据获取
 func (p *Player) GetRet() (ret utils.Dict) {
 	ret = utils.Dict{
-		"cards": p.Cards,
-		"role":  p.Role,
-		"score": p.CallScore,
-		"ready": p.Ready,
+		"id":         p.ID,
+		"card_num":   len(p.Cards),
+		"role":       p.Role,
+		"call_score": p.CallScore,
+		"ready":      p.Ready,
+		"coin":       GetCoin(p.ID),
+		"name":       p.Name,
+		"avatar":     p.Avatar,
+		"desk_id":    p.DeskID,
 	}
 	return ret
 }

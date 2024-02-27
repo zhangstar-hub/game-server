@@ -65,7 +65,7 @@ func ReqZNotify(zClient *ZMQClient, cmd string, data utils.Dict) {
 
 // 玩家进入房间
 func ReqZEnterRoom(zClient *ZMQClient, data utils.Dict) {
-	ReqZNotify(zClient, "ReqEnterRoom", data)
+	ReqZNotify(zClient, "ReqEnterRoomUpdate", data)
 }
 
 // 玩家准备通知
@@ -85,5 +85,5 @@ func ReqZPlayCards(zClient *ZMQClient, data utils.Dict) {
 
 // 玩家离开房间
 func ReqZLeaveRoom(zClient *ZMQClient, data utils.Dict) {
-	ReqZNotify(zClient, "ReqLeaveRoom", data)
+	ReqZNotify(zClient, "ReqLeaveRoomUpdate", data)
 }

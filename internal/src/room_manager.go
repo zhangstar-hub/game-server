@@ -123,14 +123,9 @@ func ReqEnterRoom(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 		"ReqZEnterRoom",
 		ctx.User.ID,
 		room.PlayerIds(ctx.User.ID),
-		utils.Dict{
-			"uid":  ctx.User.ID,
-			"role": ctx.Player.Role,
-			"coin": ctx.User.Coin,
-			"name": ctx.User.Name,
-		},
+		ctx.Player.GetRet(),
 	)
-	fmt.Printf("ctx.Player.DeskID: %v\n", ctx.Player.DeskID)
+
 	ret["room"] = room.GetRet(ctx.Player)
 	return ret
 }
