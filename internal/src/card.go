@@ -22,56 +22,25 @@ const (
 	PlaneWithPair                      // 飞机带对子
 )
 
-var CardWeight = map[string]int{
-	"3":          0,
-	"4":          1,
-	"5":          2,
-	"6":          3,
-	"7":          4,
-	"8":          5,
-	"9":          6,
-	"10":         7,
-	"J":          8,
-	"Q":          9,
-	"K":          10,
-	"A":          11,
-	"2":          12,
-	"SmallJoker": 13,
-	"BigJoker":   14,
-}
-
 // 定义牌的类型
 type Card struct {
-	Suit  string // 花色
-	Value string // 点数
+	Suit  int // 花色
+	Value int // 点数
 }
 
 // 创建一副牌
 func NewCards() []Card {
-	suits := []string{"Spades", "Hearts", "Diamonds", "Clubs"}
-	values := []string{"3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A", "2"}
-	jokers := []string{"BigJoker", "SmallJoker"}
+	suits := []int{1, 2, 3, 4, 5}                                        // 方片 梅花 红桃 黑桃 王
+	values := []int{3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17} // 3 - BigJoker
 
 	deck := make([]Card, 0)
-	// 添加普通牌
 	for _, suit := range suits {
 		for _, value := range values {
 			card := Card{Suit: suit, Value: value}
 			deck = append(deck, card)
 		}
 	}
-
-	// 添加大小王
-	for _, joker := range jokers {
-		card := Card{Suit: "Joker", Value: joker}
-		deck = append(deck, card)
-	}
 	return deck
-}
-
-// 获取卡片的权重
-func (card *Card) GetWeight() int {
-	return CardWeight[card.Value]
 }
 
 // 判断是否为对子
@@ -79,7 +48,7 @@ func isPair(cards []Card) bool {
 	if len(cards) != 2 {
 		return false
 	}
-	return cards[0].GetWeight() == cards[1].GetWeight()
+	return cards[0].Value == cards[1].Value
 }
 
 // 判断是否为三张
@@ -100,7 +69,7 @@ func isThreeWithOne(cards []Card) bool {
 	}
 
 	sort.Slice(cards, func(i, j int) bool {
-		return cards[i].GetWeight() < cards[j].GetWeight()
+		return cards[i].Value < cards[j].Value
 	})
 
 	if cards[0].Value == cards[1].Value && cards[1].Value == cards[2].Value {
@@ -121,7 +90,7 @@ func isThreeWithTwo(cards []Card) bool {
 	}
 
 	sort.Slice(cards, func(i, j int) bool {
-		return cards[i].GetWeight() < cards[j].GetWeight()
+		return cards[i].Value < cards[j].Value
 	})
 
 	if cards[0].Value == cards[1].Value && cards[1].Value == cards[2].Value && cards[3].Value == cards[4].Value {
@@ -141,13 +110,13 @@ func isStraight(cards []Card) bool {
 		return false
 	}
 	sort.Slice(cards, func(i, j int) bool {
-		return cards[i].GetWeight() < cards[j].GetWeight()
+		return cards[i].Value < cards[j].Value
 	})
 	for i := 0; i < len(cards)-1; i++ {
-		if cards[i].GetWeight() > 11 {
+		if cards[i].Value > 11 {
 			return false
 		}
-		if cards[i].GetWeight()+1 != cards[i+1].GetWeight() {
+		if cards[i].Value+1 != cards[i+1].Value {
 			return false
 		}
 	}
@@ -174,7 +143,7 @@ func isKingBomb(cards []Card) bool {
 		return false
 	}
 	for _, card := range cards {
-		if card.Value != "Big Joker" && card.Value != "Small Joker" {
+		if card.Value != 16 && card.Value != 17 {
 			return false
 		}
 	}
@@ -188,14 +157,14 @@ func isPairStraight(cards []Card) bool {
 	}
 
 	sort.Slice(cards, func(i, j int) bool {
-		return cards[i].GetWeight() < cards[j].GetWeight()
+		return cards[i].Value < cards[j].Value
 	})
 
 	for i := 0; i < len(cards)-1; i += 2 {
-		if cards[i].GetWeight() != cards[i+1].GetWeight() {
+		if cards[i].Value != cards[i+1].Value {
 			return false
 		}
-		if i > 0 && cards[i].GetWeight() != cards[i-1].GetWeight()+1 {
+		if i > 0 && cards[i].Value != cards[i-1].Value+1 {
 			return false
 		}
 	}
@@ -209,7 +178,7 @@ func PlaneInfo(cards []Card) (int, int) {
 	planes := make([]Card, 0)
 	for _, card := range cards {
 		countMap[card]++
-		if countMap[card] == 3 && card.GetWeight() <= 11 {
+		if countMap[card] == 3 && card.Value <= 11 {
 			planes = append(planes, card)
 		}
 	}
@@ -219,21 +188,21 @@ func PlaneInfo(cards []Card) (int, int) {
 	}
 
 	sort.Slice(planes, func(i, j int) bool {
-		return planes[i].GetWeight() < planes[j].GetWeight()
+		return planes[i].Value < planes[j].Value
 	})
 
 	minPlane := 0
 	maxLength := 1
 	currentLength := 1
 	for i := 1; i < len(planes); i++ {
-		if planes[i-1].GetWeight()+1 == planes[i].GetWeight() {
+		if planes[i-1].Value+1 == planes[i].Value {
 			currentLength++
 		} else {
 			currentLength = 1
 		}
 		if currentLength > maxLength {
 			maxLength = currentLength
-			minPlane = planes[i-currentLength+1].GetWeight()
+			minPlane = planes[i-currentLength+1].Value
 		}
 	}
 	return maxLength, minPlane
@@ -263,7 +232,7 @@ func isPlaneWithPair(cards []Card) bool {
 		return false
 	}
 
-	countMap := make(map[string]int)
+	countMap := make(map[int]int)
 	for _, card := range cards {
 		countMap[card.Value]++
 	}
@@ -331,27 +300,27 @@ func IsValidPlay(bCards []Card, cards []Card) bool {
 	if len(bCards) == 0 {
 		return true
 	}
-	if cardType != beforeCardType && (cardType != Bomb || cardType != KingBomb) {
+	if cardType != beforeCardType && !(cardType == Bomb || cardType == KingBomb) {
 		return false
 	}
 	sort.Slice(cards, func(i, j int) bool {
-		return cards[i].GetWeight() < cards[j].GetWeight()
+		return cards[i].Value < cards[j].Value
 	})
 
 	if cardType == beforeCardType {
 		switch cardType {
 		case Single, Pair, Three:
-			return cards[0].GetWeight() > bCards[0].GetWeight()
+			return cards[0].Value > bCards[0].Value
 		case Straight:
-			return len(bCards) == len(cards) && cards[0].GetWeight() > bCards[0].GetWeight()
+			return len(bCards) == len(cards) && cards[0].Value > bCards[0].Value
 		case PairStraight:
-			return len(bCards) == len(cards) && cards[0].GetWeight() > bCards[0].GetWeight()
+			return len(bCards) == len(cards) && cards[0].Value > bCards[0].Value
 		case PlaneWithPair, PlaneWithSingle, PlaneWithoutWings, ThreeWithOne, ThreeWithTwo:
 			_, minPlane := PlaneInfo(cards)
 			_, bMinPlane := PlaneInfo(bCards)
 			return len(bCards) == len(cards) && minPlane > bMinPlane
 		case Bomb:
-			return cards[0].GetWeight() > bCards[0].GetWeight()
+			return cards[0].Value > bCards[0].Value
 		}
 	} else {
 		switch cardType {

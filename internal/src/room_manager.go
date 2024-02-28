@@ -41,7 +41,7 @@ func (m *RoomManager) EnterRoom(ctx *Ctx) (room *Room) {
 		}
 		return true
 	})
-	for success == false {
+	for !success {
 		atomic.AddUint32(&m.RoomCounter, 1)
 		room = NewRoom(ctx.ZClient)
 		room.ID = uint32(m.RoomCounter)

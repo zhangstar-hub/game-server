@@ -30,11 +30,11 @@ func AddCoin(uid uint, coin int64) int64 {
 	key := fmt.Sprintf("coin_%d", uid)
 	v, err := db.RedisClient.IncrBy(key, coin)
 	if GetCoin(uid) < coin {
-		logger.Error(fmt.Sprint("AddCoin failed not enough coin, uid=%d, coin=%d", uid, coin))
+		logger.Error(fmt.Sprintf("AddCoin failed not enough coin, uid=%d, coin=%d", uid, coin))
 		return 0
 	}
 	if err != nil {
-		logger.Error(fmt.Sprint("AddCoin failed, uid=%d, coin=%d", uid, coin))
+		logger.Error(fmt.Sprintf("AddCoin failed, uid=%d, coin=%d", uid, coin))
 	}
 	return v
 }
@@ -44,11 +44,11 @@ func GetCoin(uid uint) int64 {
 	key := fmt.Sprintf("coin_%d", uid)
 	v, err := db.RedisClient.Get(key)
 	if err != nil {
-		logger.Error(fmt.Sprint("GetCoin failed, uid=%d", uid))
+		logger.Error(fmt.Sprintf("GetCoin failed, uid=%d", uid))
 	}
 	coin, err := strconv.ParseInt(v, 10, 64)
 	if err != nil {
-		logger.Error(fmt.Sprint("GetCoin strconv failed, uid=%d", uid))
+		logger.Error(fmt.Sprintf("GetCoin strconv failed, uid=%d", uid))
 	}
 	return coin
 }
