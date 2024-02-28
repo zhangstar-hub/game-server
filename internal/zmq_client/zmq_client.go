@@ -49,11 +49,11 @@ func (z *ZMQClient) Send(data utils.Dict) (int, error) {
 }
 
 // 消息定向广播
-func (z *ZMQClient) BroastMessage(cmd string, form_uid uint, to_uid_list []uint, message utils.Dict) {
+func (z *ZMQClient) BroastMessage(cmd string, from_uid uint, to_uid_list []uint, message utils.Dict) {
 	z.Send(utils.Dict{
 		"cmd": cmd,
 		"data": utils.Dict{
-			"form_uid":    form_uid,
+			"from_uid":    from_uid,
 			"to_uid_list": to_uid_list,
 			"message":     message,
 		},

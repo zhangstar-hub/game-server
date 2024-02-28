@@ -87,7 +87,7 @@ func (p *Player) GetRet() (ret utils.Dict) {
 		"card_num":   len(p.Cards),
 		"role":       p.Role,
 		"call_score": p.CallScore,
-		"ready":      p.Ready,
+		"is_ready":   p.Ready,
 		"coin":       GetCoin(p.ID),
 		"name":       p.Name,
 		"avatar":     p.Avatar,

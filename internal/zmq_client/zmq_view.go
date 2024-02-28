@@ -45,7 +45,7 @@ func ReqZNotify(zClient *ZMQClient, cmd string, data utils.Dict) {
 	for _, v := range data["to_uid_list"].([]interface{}) {
 		to_uid_list[uint(v.(float64))] = struct{}{}
 	}
-	form_uid := uint(data["form_uid"].(float64))
+	from_uid := uint(data["from_uid"].(float64))
 	message := data["message"].(utils.Dict)
 
 	zClient.CtxMap.Range(func(key, value any) bool {
@@ -54,7 +54,7 @@ func ReqZNotify(zClient *ZMQClient, cmd string, data utils.Dict) {
 			v.Conn.SendData(utils.Dict{
 				"cmd": cmd,
 				"data": utils.Dict{
-					"form_uid": form_uid,
+					"from_uid": from_uid,
 					"message":  message,
 				},
 			})
@@ -70,12 +70,12 @@ func ReqZEnterRoom(zClient *ZMQClient, data utils.Dict) {
 
 // 玩家准备通知
 func ReqZRoomReady(zClient *ZMQClient, data utils.Dict) {
-	ReqZNotify(zClient, "ReqRoomReady", data)
+	ReqZNotify(zClient, "ReqRoomReadyUpdate", data)
 }
 
 // 玩家叫分
 func ReqZCallScore(zClient *ZMQClient, data utils.Dict) {
-	ReqZNotify(zClient, "ReqCallScore", data)
+	ReqZNotify(zClient, "ReqCallScoreUpdate", data)
 }
 
 // 玩家出牌

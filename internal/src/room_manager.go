@@ -105,14 +105,9 @@ func (rm *RoomManager) GetRoom(roomID uint32, uid uint) (bool, *Room) {
 // 进入房间
 func ReqEnterRoom(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 	ret = make(utils.Dict)
-	var room *Room
-	if ctx.User.RoomID > 0 {
-		r, ok := ctx.RoomManager.Rooms.Load(ctx.User.RoomID)
-		if !ok || !r.(*Room).InRoom(ctx.User.ID) {
-			ctx.Player.Reset()
-		} else {
-			room = r.(*Room)
-		}
+	ok, room := ctx.RoomManager.GetRoom(ctx.User.RoomID, ctx.User.ID)
+	if !ok {
+		ret["error"] = "not in room"
 	}
 	if room == nil {
 		room = ctx.RoomManager.EnterRoom(ctx)
@@ -130,11 +125,22 @@ func ReqEnterRoom(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 	return ret
 }
 
+// 离开房间
+func ReqLeaveRoom(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
+	ret = make(utils.Dict)
+	ok, room := ctx.RoomManager.GetRoom(ctx.User.RoomID, ctx.User.ID)
+	if !ok {
+		ret["error"] = "not in room"
+	}
+	room.LeaveRoom(ctx)
+	return ret
+}
+
 // 玩家准备
 func ReqRoomReady(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 	ret = make(utils.Dict)
+	fmt.Printf("data: %v\n", data)
 	is_ready := data["is_ready"].(bool)
-	fmt.Printf("ctx.Player.Table.ID: %v\n", ctx.User.ID)
 	ok, room := ctx.RoomManager.GetRoom(ctx.User.RoomID, ctx.User.ID)
 	if !ok {
 		ret["error"] = "not in room"
@@ -147,7 +153,8 @@ func ReqRoomReady(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 
 	ctx.Player.SetReady(is_ready)
 
-	if room.ReadyCheck() {
+	is_started := room.ReadyCheck()
+	if is_started {
 		room.StartPlay()
 	}
 	// 提示其他玩家 我做好准备了
@@ -156,11 +163,15 @@ func ReqRoomReady(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 		ctx.User.ID,
 		room.PlayerIds(ctx.User.ID),
 		utils.Dict{
-			"is_ready": is_ready,
+			"is_ready":    is_ready,
+			"game_status": room.GameStatus,
+			"call_desk":   room.CallDeskID,
 		},
 	)
 
 	ret["is_ready"] = is_ready
+	ret["game_status"] = room.GameStatus
+	ret["call_desk"] = room.CallDeskID
 	return ret
 }
 
@@ -197,8 +208,7 @@ func ReqCallScore(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 		ret["error"] = "must geater than before call score"
 	}
 	r.CallScore(ctx.Player, score)
-	callEnd := score == 3 || r.CallScoreNum == 3
-	if callEnd {
+	if score == 3 || r.CallScoreNum == 3 {
 		r.ConfirmRole()
 	} else {
 		r.CallConvert()
@@ -209,12 +219,13 @@ func ReqCallScore(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 		ctx.User.ID,
 		r.PlayerIds(ctx.User.ID),
 		utils.Dict{
-			"score":     score,
-			"call_end":  callEnd,
-			"call_desk": r.CallDeskID,
+			"score":       score,
+			"game_status": r.GameStatus,
+			"call_desk":   r.CallDeskID,
 		},
 	)
-	ret["call_end"] = callEnd
+	ret["call_desk"] = r.CallDeskID
+	ret["game_status"] = r.GameStatus
 	return ret
 }
 

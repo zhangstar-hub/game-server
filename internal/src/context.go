@@ -39,8 +39,10 @@ type Ctx struct {
 
 // 玩家退出清理
 func (ctx *Ctx) Close() {
-	if ok, r := ctx.RoomManager.GetRoom(ctx.User.RoomID, ctx.User.ID); ok {
-		r.LeaveRoom(ctx)
+	if ctx.User != nil {
+		if ok, r := ctx.RoomManager.GetRoom(ctx.User.RoomID, ctx.User.ID); ok {
+			r.LeaveRoom(ctx)
+		}
 	}
 	ctx.SaveAll()
 	ctx.Conn.Close()
