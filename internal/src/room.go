@@ -15,7 +15,6 @@ type Room struct {
 	ZClient        ZMQInterface // 广播器
 	BeforeCards    []Card       // 上一次出牌
 	BeforePlayDesk int          // 上一次出牌的位置
-	Cards          []Card       // 桌面上的纸牌
 	Players        [3]*Player   // 玩家
 	Score          int64        // 分数
 	Mutil          int          // 倍数
@@ -28,13 +27,13 @@ type Room struct {
 	CallDeskID     int          // 出手座位号
 	CallScoreNum   int          // 叫分次数
 	MaxCallSocre   int          // 叫分最大数
+	LastCards      []*Card      // 底牌
 
 	SettleInfo utils.Dict // 结算信息
 }
 
 func NewRoom(ZClient ZMQInterface) *Room {
 	return &Room{
-		Cards:      NewCards(),
 		Players:    [3]*Player{},
 		Score:      1,
 		mu:         sync.RWMutex{},
@@ -162,12 +161,19 @@ func (r *Room) StartPlay() {
 	r.CallDeskID = rand.Intn(3)
 	r.SettleInfo = utils.Dict{}
 	// 发牌
+	cards := NewCards()
+	ShuffleCards(cards)
 	for i := 0; i < len(r.Players); i++ {
-		r.Players[i].Cards = append([]Card{}, r.Cards[i*17:(i+1)*17]...)
+		r.Players[i].Cards = append([]Card{}, cards[i*17:(i+1)*17]...)
 		sort.Slice(r.Players[i].Cards, func(j, k int) bool {
-			return r.Players[i].Cards[j].Value < r.Players[i].Cards[k].Value
+			return r.Players[i].Cards[j].Value > r.Players[i].Cards[k].Value
 		})
 	}
+}
+
+// 洗牌
+func ShuffleCards(cards []Card) {
+	rand.Shuffle(len(cards), func(i, j int) { cards[i], cards[j] = cards[j], cards[i] })
 }
 
 // 叫分
@@ -318,7 +324,7 @@ func (r *Room) GetRet(p *Player) utils.Dict {
 		"game_status": r.GameStatus,
 		"score":       r.Score,
 		"call_desk":   r.CallDeskID,
-		"cards":       p.Cards,
+		"cards":       CardsToValue(p.Cards),
 	}
 	ret["players"] = r.PlayersInfo()
 	return ret

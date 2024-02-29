@@ -30,8 +30,8 @@ type Card struct {
 
 // 创建一副牌
 func NewCards() []Card {
-	suits := []int{1, 2, 3, 4, 5}                                        // 方片 梅花 红桃 黑桃 王
-	values := []int{3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17} // 3 - BigJoker
+	suits := []int{1, 2, 3, 4}                                   // 方片 梅花 红桃 黑桃
+	values := []int{3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15} // 3 - K
 
 	deck := make([]Card, 0)
 	for _, suit := range suits {
@@ -40,7 +40,17 @@ func NewCards() []Card {
 			deck = append(deck, card)
 		}
 	}
+	deck = append(deck, Card{Suit: 5, Value: 16}, Card{Suit: 5, Value: 17})
 	return deck
+}
+
+// 获取卡片值
+func CardsToValue(cards []Card) []int {
+	cardsValue := make([]int, len(cards))
+	for i, v := range cards {
+		cardsValue[i] = v.Suit*100 + v.Value
+	}
+	return cardsValue
 }
 
 // 判断是否为对子

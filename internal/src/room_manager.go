@@ -139,7 +139,6 @@ func ReqLeaveRoom(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 // 玩家准备
 func ReqRoomReady(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 	ret = make(utils.Dict)
-	fmt.Printf("data: %v\n", data)
 	is_ready := data["is_ready"].(bool)
 	ok, room := ctx.RoomManager.GetRoom(ctx.User.RoomID, ctx.User.ID)
 	if !ok {
@@ -178,12 +177,21 @@ func ReqRoomReady(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 // 看牌
 func ReqWatchCards(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 	ret = make(utils.Dict)
-	ok, _ := ctx.RoomManager.GetRoom(ctx.User.RoomID, ctx.User.ID)
+	ok, room := ctx.RoomManager.GetRoom(ctx.User.RoomID, ctx.User.ID)
 	if !ok {
 		ret["error"] = "not in room"
 		return ret
 	}
-	ret["cards"] = ctx.Player.Cards
+	players_cards_num := []utils.Dict{}
+	for _, v := range room.Players {
+		players_cards_num = append(players_cards_num, utils.Dict{
+			"id":       v.ID,
+			"card_num": len(v.Cards),
+		})
+	}
+	ret["game_status"] = room.GameStatus
+	ret["cards"] = CardsToValue(ctx.Player.Cards)
+	ret["players_cards_num"] = players_cards_num
 	return ret
 }
 
@@ -272,7 +280,7 @@ func ReqPlayCards(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 		return ret
 	}
 	cardsType := r.PlayCards(ctx.Player, cards)
-	ret["cards"] = ctx.Player.Cards
+	ret["cards"] = CardsToValue(ctx.Player.Cards)
 	ret["cards_type"] = cardsType
 	if len(ctx.Player.Cards) == 0 {
 		ret["settle_info"], r.SettleInfo = r.SettleInfo, utils.Dict{}
