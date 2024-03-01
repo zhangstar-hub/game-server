@@ -179,16 +179,10 @@ func ReqWatchCards(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 		ret["error"] = "not in room"
 		return ret
 	}
-	players_cards_num := []utils.Dict{}
-	for _, v := range room.Players {
-		players_cards_num = append(players_cards_num, utils.Dict{
-			"id":       v.ID,
-			"card_num": len(v.Cards),
-		})
-	}
+
 	ret["game_status"] = room.GameStatus
 	ret["cards"] = CardsToValue(ctx.Player.Cards)
-	ret["players_cards_num"] = players_cards_num
+	ret["players"] = room.PlayersInfo()
 	return ret
 }
 
@@ -218,6 +212,7 @@ func ReqCallScore(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 	} else {
 		r.CallConvert()
 	}
+
 	// 提示其他玩家 我的叫分
 	ctx.ZClient.BroastMessage(
 		"ReqZCallScore",
@@ -230,6 +225,7 @@ func ReqCallScore(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 		},
 	)
 	ret["call_desk"] = r.CallDeskID
+	ret["cards"] = CardsToValue(ctx.Player.Cards)
 	ret["game_status"] = r.GameStatus
 	return ret
 }
@@ -262,8 +258,17 @@ func ReqPlayCards(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 
 	cardsType := r.PlayCards(ctx.Player, cards)
 	game_status := r.GameStatus
+
+	players_cards := []utils.Dict{}
 	if len(ctx.Player.Cards) == 0 {
 		game_status = 3
+		for _, v := range r.Players {
+			players_cards = append(players_cards, utils.Dict{
+				"id":      v.ID,
+				"cards":   CardsToValue(v.Cards),
+				"desk_id": v.DeskID,
+			})
+		}
 	}
 
 	ret["cards"] = CardsToValue(ctx.Player.Cards)
@@ -271,6 +276,8 @@ func ReqPlayCards(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 	ret["game_status"] = game_status
 	ret["call_desk"] = r.CallDeskID
 	ret["played_cards"] = data["cards"]
+	ret["players_cards"] = players_cards
+	ret["settle_info"] = r.SettleInfo
 
 	// 提示其他玩家 我的出牌
 	ctx.ZClient.BroastMessage(
@@ -278,11 +285,13 @@ func ReqPlayCards(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 		ctx.User.ID,
 		r.PlayerIds(ctx.User.ID),
 		utils.Dict{
-			"call_desk":    r.CallDeskID,
-			"game_status":  game_status,
-			"played_cards": data["cards"],
-			"cards_type":   cardsType,
-			"card_num":     len(ctx.Player.Cards),
+			"call_desk":     r.CallDeskID,
+			"game_status":   game_status,
+			"played_cards":  data["cards"],
+			"cards_type":    cardsType,
+			"card_num":      len(ctx.Player.Cards),
+			"players_cards": players_cards,
+			"settle_info":   r.SettleInfo,
 		},
 	)
 	return ret

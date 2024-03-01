@@ -169,6 +169,7 @@ func (r *Room) StartPlay() {
 			return r.Players[i].Cards[j].Value > r.Players[i].Cards[k].Value
 		})
 	}
+	r.SettleInfo = utils.Dict{}
 }
 
 // 洗牌
@@ -213,12 +214,12 @@ func (r *Room) PlayCards(p *Player, cards []Card) CardsType {
 	}
 	cardsType := GetCardsType(cards)
 	if len(cards) > 0 {
-		if cardsType == Unknown {
-			panic(errors.New("unknown cards type"))
-		}
-		if r.BeforePlayDesk != p.DeskID && len(r.BeforeCards) > 0 && !IsValidPlay(r.BeforeCards, cards) {
-			panic(errors.New("can't play cards"))
-		}
+		// if cardsType == Unknown {
+		// 	panic(errors.New("unknown cards type"))
+		// }
+		// if r.BeforePlayDesk != p.DeskID && len(r.BeforeCards) > 0 && !IsValidPlay(r.BeforeCards, cards) {
+		// 	panic(errors.New("can't play cards"))
+		// }
 		if cardsType == Bomb || cardsType == KingBomb {
 			r.Mutil += 2
 		}
@@ -246,7 +247,7 @@ func (r *Room) PlayCards(p *Player, cards []Card) CardsType {
 // 结算
 func (r *Room) Settle() {
 	var CoinPool int64
-	playerInfo := utils.Dict{}
+	winCoinsData := utils.Dict{}
 	for _, p := range r.Players {
 		if r.winRole != p.Role {
 			var c int64
@@ -257,8 +258,8 @@ func (r *Room) Settle() {
 			}
 			CoinPool += c
 			AddCoin(p.ID, -c)
-			playerInfo[fmt.Sprintf("%d", p.ID)] = utils.Dict{
-				"winCoins": -c,
+			winCoinsData[fmt.Sprintf("%d", p.ID)] = utils.Dict{
+				"win_coins": -c,
 			}
 		}
 	}
@@ -272,12 +273,12 @@ func (r *Room) Settle() {
 				c += CoinPool
 			}
 			AddCoin(p.ID, c)
-			playerInfo[fmt.Sprintf("%d", p.ID)] = utils.Dict{
-				"winCoins": c,
+			winCoinsData[fmt.Sprintf("%d", p.ID)] = utils.Dict{
+				"win_coins": c,
 			}
 		}
 	}
-	r.SettleInfo["player_info"] = playerInfo
+	r.SettleInfo["win_coins_data"] = winCoinsData
 	r.SettleInfo["win_role"] = r.winRole
 	r.SettleInfo["multi"] = r.Mutil
 }
@@ -289,6 +290,7 @@ func (r *Room) GameOver() {
 	for _, p := range r.Players {
 		p.Reset()
 	}
+	r.SettleInfo["players"] = r.PlayersInfo()
 	r.ClearRoom()
 }
 
