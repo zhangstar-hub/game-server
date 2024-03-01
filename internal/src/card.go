@@ -53,6 +53,15 @@ func CardsToValue(cards []Card) []int {
 	return cardsValue
 }
 
+// 卡片值转卡片对象
+func ValueToCards(cardsVal []int) []Card {
+	cards := make([]Card, len(cardsVal))
+	for i, v := range cardsVal {
+		cards[i] = Card{Suit: v / 100, Value: v % 100}
+	}
+	return cards
+}
+
 // 判断是否为对子
 func isPair(cards []Card) bool {
 	if len(cards) != 2 {
@@ -123,7 +132,7 @@ func isStraight(cards []Card) bool {
 		return cards[i].Value < cards[j].Value
 	})
 	for i := 0; i < len(cards)-1; i++ {
-		if cards[i].Value > 11 {
+		if cards[i].Value > 14 {
 			return false
 		}
 		if cards[i].Value+1 != cards[i+1].Value {
@@ -188,7 +197,7 @@ func PlaneInfo(cards []Card) (int, int) {
 	planes := make([]Card, 0)
 	for _, card := range cards {
 		countMap[card]++
-		if countMap[card] == 3 && card.Value <= 11 {
+		if countMap[card] == 3 && card.Value <= 14 {
 			planes = append(planes, card)
 		}
 	}
@@ -301,15 +310,6 @@ func GetCardsType(cards []Card) CardsType {
 func IsValidPlay(bCards []Card, cards []Card) bool {
 	cardType := GetCardsType(cards)
 	beforeCardType := GetCardsType(bCards)
-	if len(cards) == 0 {
-		return true
-	}
-	if cardType == Unknown {
-		return false
-	}
-	if len(bCards) == 0 {
-		return true
-	}
 	if cardType != beforeCardType && !(cardType == Bomb || cardType == KingBomb) {
 		return false
 	}
@@ -317,28 +317,29 @@ func IsValidPlay(bCards []Card, cards []Card) bool {
 		return cards[i].Value < cards[j].Value
 	})
 
-	if cardType == beforeCardType {
-		switch cardType {
-		case Single, Pair, Three:
-			return cards[0].Value > bCards[0].Value
-		case Straight:
-			return len(bCards) == len(cards) && cards[0].Value > bCards[0].Value
-		case PairStraight:
-			return len(bCards) == len(cards) && cards[0].Value > bCards[0].Value
-		case PlaneWithPair, PlaneWithSingle, PlaneWithoutWings, ThreeWithOne, ThreeWithTwo:
-			_, minPlane := PlaneInfo(cards)
-			_, bMinPlane := PlaneInfo(bCards)
-			return len(bCards) == len(cards) && minPlane > bMinPlane
-		case Bomb:
-			return cards[0].Value > bCards[0].Value
-		}
-	} else {
+	if cardType != beforeCardType {
 		switch cardType {
 		case Bomb:
 			return beforeCardType != KingBomb
 		case KingBomb:
 			return true
 		}
+		return false
+	}
+
+	switch cardType {
+	case Single, Pair, Three:
+		return cards[0].Value > bCards[0].Value
+	case Straight:
+		return len(bCards) == len(cards) && cards[0].Value > bCards[0].Value
+	case PairStraight:
+		return len(bCards) == len(cards) && cards[0].Value > bCards[0].Value
+	case PlaneWithPair, PlaneWithSingle, PlaneWithoutWings, ThreeWithOne, ThreeWithTwo:
+		_, minPlane := PlaneInfo(cards)
+		_, bMinPlane := PlaneInfo(bCards)
+		return len(bCards) == len(cards) && minPlane > bMinPlane
+	case Bomb:
+		return cards[0].Value > bCards[0].Value
 	}
 	return false
 }

@@ -144,7 +144,6 @@ func (sc *ServerConn) RequestFunction(ctx *src.Ctx, data utils.Dict) utils.Dict 
 			if err := recover(); err != nil {
 				e = err.(error)
 				utils.PrintStackTrace()
-				fmt.Println("Error:", err)
 			}
 		}()
 		ctx.Cmd = cmd
@@ -158,8 +157,11 @@ func (sc *ServerConn) RequestFunction(ctx *src.Ctx, data utils.Dict) utils.Dict 
 		return
 	}()
 	if err != nil {
-		return utils.Dict{
-			"error": "server error",
+		return map[string]interface{}{
+			"cmd": cmd,
+			"data": utils.Dict{
+				"error": "server error",
+			},
 		}
 	}
 	return utils.Dict{

@@ -2,10 +2,7 @@ package src
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"my_app/internal/utils"
-	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -252,51 +249,41 @@ func ReqGetRole(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 // 出牌
 func ReqPlayCards(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 	ret = make(utils.Dict)
-	cards := []Card{}
-	// for _, v := range data["cards"].([]utils.Dict) {
-	// 	cards = append(cards, Card{
-	// 		Suit:  v["Suit"].(string),
-	// 		Value: v["Value"].(string),
-	// 	})
-	// }
-
-	// temp
-	file, err := os.Open("configs/cards.json")
-	if err != nil {
-		fmt.Println("无法打开文件:", err)
-		return
+	cardsValue := []int{}
+	for _, v := range data["cards"].([]interface{}) {
+		cardsValue = append(cardsValue, int(v.(float64)))
 	}
-	defer file.Close()
-	decoder := json.NewDecoder(file)
-	if err := decoder.Decode(&cards); err != nil {
-		fmt.Println("解码 JSON 失败:", err)
-		return
-	}
-	// temp
-
+	cards := ValueToCards(cardsValue)
 	ok, r := ctx.RoomManager.GetRoom(ctx.User.RoomID, ctx.User.ID)
 	if !ok {
 		ret["message"] = "not in room"
 		return ret
 	}
+
 	cardsType := r.PlayCards(ctx.Player, cards)
+	game_status := r.GameStatus
+	if len(ctx.Player.Cards) == 0 {
+		game_status = 3
+	}
+
 	ret["cards"] = CardsToValue(ctx.Player.Cards)
 	ret["cards_type"] = cardsType
-	if len(ctx.Player.Cards) == 0 {
-		ret["settle_info"], r.SettleInfo = r.SettleInfo, utils.Dict{}
-		ret["win_role"] = r.winRole
-		ret["is_spring"] = r.IsSpring
-	}
-	b_ret := utils.Dict{
-		"card_num": len(ctx.Player.Cards),
-	}
-	utils.MergeMaps(b_ret, ret)
+	ret["game_status"] = game_status
+	ret["call_desk"] = r.CallDeskID
+	ret["played_cards"] = data["cards"]
+
 	// 提示其他玩家 我的出牌
 	ctx.ZClient.BroastMessage(
 		"ReqZPlayCards",
 		ctx.User.ID,
 		r.PlayerIds(ctx.User.ID),
-		b_ret,
+		utils.Dict{
+			"call_desk":    r.CallDeskID,
+			"game_status":  game_status,
+			"played_cards": data["cards"],
+			"cards_type":   cardsType,
+			"card_num":     len(ctx.Player.Cards),
+		},
 	)
 	return ret
 }

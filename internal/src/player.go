@@ -2,6 +2,7 @@ package src
 
 import (
 	"errors"
+	"fmt"
 	"my_app/internal/utils"
 
 	"github.com/thoas/go-funk"
@@ -64,6 +65,9 @@ func (p *Player) ConfirmRole(role int) {
 
 // 打牌
 func (p *Player) PlayCards(cards []Card) {
+	fmt.Printf("cards: %v\n", cards)
+	fmt.Printf("p.Cards: %v\n", p.Cards)
+
 	for _, card := range cards {
 		if !funk.Contains(p.Cards, card) {
 			panic(errors.New("play card error"))

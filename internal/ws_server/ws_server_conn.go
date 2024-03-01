@@ -2,7 +2,6 @@ package ws_server
 
 import (
 	"encoding/json"
-	"fmt"
 	"my_app/internal/middleware"
 	"my_app/internal/router"
 	"my_app/internal/src"
@@ -115,7 +114,6 @@ func (sc *WSServerConn) RequestFunction(ctx *src.Ctx, data utils.Dict) utils.Dic
 			if err := recover(); err != nil {
 				e = err.(error)
 				utils.PrintStackTrace()
-				fmt.Println("Error:", err)
 			}
 		}()
 		ctx.Cmd = cmd
@@ -130,7 +128,10 @@ func (sc *WSServerConn) RequestFunction(ctx *src.Ctx, data utils.Dict) utils.Dic
 	}()
 	if err != nil {
 		return map[string]interface{}{
-			"error": "server error",
+			"cmd": cmd,
+			"data": utils.Dict{
+				"error": "server error",
+			},
 		}
 	}
 	return map[string]interface{}{

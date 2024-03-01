@@ -205,30 +205,33 @@ func (r *Room) ConfirmRole() {
 
 // 出牌
 func (r *Room) PlayCards(p *Player, cards []Card) CardsType {
-	// if !IsValidPlay(r.BeforeCards, cards) {
-	// 	panic(errors.New("can't play cards"))
-	// }
-	// if r.BeforePlayDesk == p.DeskID && len(cards) == 0 {
-	// 	panic(errors.New("your cards are empty"))
-	// }
 	if r.CallDeskID != p.DeskID {
 		panic(errors.New("not your turn"))
 	}
-	cardsType := GetCardsType(cards)
-	if cardsType == Bomb || cardsType == KingBomb {
-		r.Mutil += 2
+	if r.BeforePlayDesk == p.DeskID && len(cards) == 0 {
+		panic(errors.New("your cards are empty"))
 	}
-
-	p.PlayCards(cards)
+	cardsType := GetCardsType(cards)
 	if len(cards) > 0 {
+		if cardsType == Unknown {
+			panic(errors.New("unknown cards type"))
+		}
+		if r.BeforePlayDesk != p.DeskID && len(r.BeforeCards) > 0 && !IsValidPlay(r.BeforeCards, cards) {
+			panic(errors.New("can't play cards"))
+		}
+		if cardsType == Bomb || cardsType == KingBomb {
+			r.Mutil += 2
+		}
+
+		p.PlayCards(cards)
 		r.BeforePlayDesk = r.CallDeskID
+		r.BeforeCards = cards
 		if !(r.IsSpring && p.Role == 2) {
 			r.IsSpring = false
 		}
 	}
-	r.BeforeCards = cards
-	r.CallConvert()
 
+	r.CallConvert()
 	if len(p.Cards) <= 0 {
 		r.winRole = p.Role
 		if r.IsSpring {
@@ -319,12 +322,13 @@ func (r *Room) PlayersInfo() []utils.Dict {
 
 func (r *Room) GetRet(p *Player) utils.Dict {
 	ret := utils.Dict{
-		"uid":         p.ID,
-		"room_id":     r.ID,
-		"game_status": r.GameStatus,
-		"score":       r.Score,
-		"call_desk":   r.CallDeskID,
-		"cards":       CardsToValue(p.Cards),
+		"uid":          p.ID,
+		"room_id":      r.ID,
+		"game_status":  r.GameStatus,
+		"score":        r.Score,
+		"call_desk":    r.CallDeskID,
+		"played_cards": CardsToValue(r.BeforeCards),
+		"cards":        CardsToValue(p.Cards),
 	}
 	ret["players"] = r.PlayersInfo()
 	return ret

@@ -80,7 +80,7 @@ func ReqZCallScore(zClient *ZMQClient, data utils.Dict) {
 
 // 玩家出牌
 func ReqZPlayCards(zClient *ZMQClient, data utils.Dict) {
-	ReqZNotify(zClient, "ReqPlayCards", data)
+	ReqZNotify(zClient, "ReqPlayCardsUpdate", data)
 }
 
 // 玩家离开房间
