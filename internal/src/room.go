@@ -27,7 +27,7 @@ type Room struct {
 	CallDeskID     int          // 出手座位号
 	CallScoreNum   int          // 叫分次数
 	MaxCallSocre   int          // 叫分最大数
-	LastCards      []*Card      // 底牌
+	LastCards      []Card       // 底牌
 
 	SettleInfo utils.Dict // 结算信息
 }
@@ -169,6 +169,7 @@ func (r *Room) StartPlay() {
 			return r.Players[i].Cards[j].Value > r.Players[i].Cards[k].Value
 		})
 	}
+	r.LastCards = cards[51:]
 	r.SettleInfo = utils.Dict{}
 }
 
@@ -185,19 +186,24 @@ func (r *Room) CallScore(p *Player, score int) {
 	p.Call(score)
 	if r.MaxCallSocre < score {
 		r.MaxCallSocre = score
+		r.Mutil = score
 	}
 	r.CallScoreNum += 1
 	if r.CallScoreNum >= 3 || score == 3 {
 		r.GameStatus = 2
 	}
-	r.Mutil = score
 }
 
-// 身份确认
+// 身份确认 获取底牌
 func (r *Room) ConfirmRole() {
 	for _, v := range r.Players {
 		if v.CallScore == r.MaxCallSocre {
 			v.ConfirmRole(2)
+			r.CallDeskID = v.DeskID
+			v.Cards = append(v.Cards, r.LastCards...)
+			sort.Slice(v.Cards, func(j, k int) bool {
+				return v.Cards[j].Value > v.Cards[k].Value
+			})
 		} else {
 			v.ConfirmRole(1)
 		}
@@ -236,7 +242,6 @@ func (r *Room) PlayCards(p *Player, cards []Card) CardsType {
 	if len(p.Cards) <= 0 {
 		r.winRole = p.Role
 		if r.IsSpring {
-			r.Score *= 2
 			r.Mutil += 2
 		}
 		r.GameOver()
@@ -252,9 +257,9 @@ func (r *Room) Settle() {
 		if r.winRole != p.Role {
 			var c int64
 			if r.winRole == 1 {
-				c = utils.Minint64(GetCoin(p.ID), r.Score)
+				c = utils.Minint64(GetCoin(p.ID), r.Score*int64(r.Mutil))
 			} else {
-				c = utils.Minint64(GetCoin(p.ID), r.Score*2)
+				c = utils.Minint64(GetCoin(p.ID), r.Score*int64(r.Mutil))
 			}
 			CoinPool += c
 			AddCoin(p.ID, -c)
@@ -286,7 +291,15 @@ func (r *Room) Settle() {
 // 游戏结束
 func (r *Room) GameOver() {
 	r.Settle()
+	r.Score = 1
 	r.GameStatus = 0
+	r.MaxCallSocre = 0
+	r.CallScoreNum = 0
+	r.Mutil = 0
+	r.BeforeCards = r.BeforeCards[:0]
+	r.BeforePlayDesk = 0
+	r.IsSpring = false
+	r.LastCards = r.LastCards[:0]
 	for _, p := range r.Players {
 		p.Reset()
 	}
@@ -331,6 +344,7 @@ func (r *Room) GetRet(p *Player) utils.Dict {
 		"call_desk":    r.CallDeskID,
 		"played_cards": CardsToValue(r.BeforeCards),
 		"cards":        CardsToValue(p.Cards),
+		"last_cards":   CardsToValue(r.LastCards),
 	}
 	ret["players"] = r.PlayersInfo()
 	return ret

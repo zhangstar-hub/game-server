@@ -2,6 +2,7 @@ package src
 
 import (
 	"context"
+	"fmt"
 	"my_app/internal/utils"
 	"sync"
 	"sync/atomic"
@@ -102,10 +103,7 @@ func (rm *RoomManager) GetRoom(roomID uint32, uid uint) (bool, *Room) {
 // 进入房间
 func ReqEnterRoom(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 	ret = make(utils.Dict)
-	ok, room := ctx.RoomManager.GetRoom(ctx.User.RoomID, ctx.User.ID)
-	if !ok {
-		ret["error"] = "not in room"
-	}
+	_, room := ctx.RoomManager.GetRoom(ctx.User.RoomID, ctx.User.ID)
 	if room == nil {
 		room = ctx.RoomManager.EnterRoom(ctx)
 	}
@@ -190,10 +188,6 @@ func ReqWatchCards(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 func ReqCallScore(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 	ret = make(utils.Dict)
 	score := int(data["score"].(float64))
-	if score < 1 || score > 3 {
-		ret["error"] = "score must be between 1 and 3"
-		return
-	}
 	ok, r := ctx.RoomManager.GetRoom(ctx.User.RoomID, ctx.User.ID)
 	if !ok {
 		ret["error"] = "not in room"
@@ -203,12 +197,18 @@ func ReqCallScore(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 		ret["error"] = "can't call score"
 		return
 	}
-	if score <= r.MaxCallSocre {
-		ret["error"] = "must geater than before call score"
+	if score < 0 || score > 3 {
+		ret["error"] = "score must be between 0 and 3"
+		return
 	}
 	r.CallScore(ctx.Player, score)
+	fmt.Printf("r.MaxCallSocre: %v\n", r.MaxCallSocre)
+	fmt.Printf("r.CallScoreNum: %v\n", r.CallScoreNum)
+
+	last_cards := []int{}
 	if score == 3 || r.CallScoreNum == 3 {
 		r.ConfirmRole()
+		last_cards = CardsToValue(r.LastCards)
 	} else {
 		r.CallConvert()
 	}
@@ -219,14 +219,18 @@ func ReqCallScore(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 		ctx.User.ID,
 		r.PlayerIds(ctx.User.ID),
 		utils.Dict{
-			"score":       score,
-			"game_status": r.GameStatus,
-			"call_desk":   r.CallDeskID,
+			"call_score":     ctx.Player.CallScore,
+			"game_status":    r.GameStatus,
+			"call_desk":      r.CallDeskID,
+			"last_cards":     last_cards,
+			"max_call_score": r.MaxCallSocre,
 		},
 	)
 	ret["call_desk"] = r.CallDeskID
 	ret["cards"] = CardsToValue(ctx.Player.Cards)
 	ret["game_status"] = r.GameStatus
+	ret["last_cards"] = last_cards
+	ret["max_call_score"] = r.MaxCallSocre
 	return ret
 }
 

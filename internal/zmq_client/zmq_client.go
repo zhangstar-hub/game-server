@@ -50,6 +50,9 @@ func (z *ZMQClient) Send(data utils.Dict) (int, error) {
 
 // 消息定向广播
 func (z *ZMQClient) BroastMessage(cmd string, from_uid uint, to_uid_list []uint, message utils.Dict) {
+	if len(to_uid_list) == 0 {
+		return
+	}
 	z.Send(utils.Dict{
 		"cmd": cmd,
 		"data": utils.Dict{
@@ -97,6 +100,7 @@ func (z *ZMQClient) MessageListener() {
 		func() {
 			defer func() {
 				if err := recover(); err != nil {
+					utils.PrintStackTrace()
 					logger.ZMQInfo(fmt.Sprintf("ZMQClient MessageListener panic: %s", err))
 				}
 			}()

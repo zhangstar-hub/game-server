@@ -2,6 +2,7 @@ package ws_server
 
 import (
 	"encoding/json"
+	"fmt"
 	"my_app/internal/middleware"
 	"my_app/internal/router"
 	"my_app/internal/src"
@@ -113,6 +114,7 @@ func (sc *WSServerConn) RequestFunction(ctx *src.Ctx, data utils.Dict) utils.Dic
 		defer func() {
 			if err := recover(); err != nil {
 				e = err.(error)
+				fmt.Printf("e: %v\n", e)
 				utils.PrintStackTrace()
 			}
 		}()

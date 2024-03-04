@@ -95,7 +95,6 @@ func (s *WSServer) handleConnections(w http.ResponseWriter, r *http.Request) {
 	for !sc.CloseFlag {
 		sc.RequestWait()
 		data, err, de_err := sc.ReadData()
-		fmt.Printf("data: %v\n", data)
 		if err != nil {
 			fmt.Printf("Error reading data: %v, %T\n", err, err)
 			return

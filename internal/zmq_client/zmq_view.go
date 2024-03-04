@@ -50,6 +50,9 @@ func ReqZNotify(zClient *ZMQClient, cmd string, data utils.Dict) {
 
 	zClient.CtxMap.Range(func(key, value any) bool {
 		v := value.(*src.Ctx)
+		if v.User == nil {
+			return true
+		}
 		if _, ok := to_uid_list[v.User.ID]; ok {
 			v.Conn.SendData(utils.Dict{
 				"cmd": cmd,
