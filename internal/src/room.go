@@ -17,7 +17,7 @@ type Room struct {
 	BeforePlayDesk int          // 上一次出牌的位置
 	Players        [3]*Player   // 玩家
 	Score          int64        // 分数
-	Mutil          int          // 倍数
+	Multi          int          // 倍数
 	mu             sync.RWMutex // 一个锁
 	GameStatus     int          // 游戏状态 0：准备 1:叫分 2:进行
 	IsFull         bool         // 是否满房了
@@ -36,6 +36,7 @@ func NewRoom(ZClient ZMQInterface) *Room {
 	return &Room{
 		Players:    [3]*Player{},
 		Score:      1,
+		Multi:      1,
 		mu:         sync.RWMutex{},
 		GameStatus: 0,
 		IsFull:     false,
@@ -187,7 +188,7 @@ func (r *Room) CallScore(p *Player, score int) {
 	p.Call(score)
 	if r.MaxCallSocre < score {
 		r.MaxCallSocre = score
-		r.Mutil = score
+		r.Multi = score
 	}
 	r.CallScoreNum += 1
 	if r.CallScoreNum >= 3 || score == 3 {
@@ -219,7 +220,6 @@ func (r *Room) PlayCards(p *Player, cards []Card) CardsType {
 	if r.BeforePlayDesk == p.DeskID && len(cards) == 0 {
 		panic(errors.New("your cards are empty"))
 	}
-	fmt.Printf("cards: %v\n", cards)
 	cardsType := GetCardsType(cards)
 	if len(cards) > 0 {
 		if cardsType == Unknown {
@@ -229,7 +229,7 @@ func (r *Room) PlayCards(p *Player, cards []Card) CardsType {
 			panic(errors.New("can't play cards"))
 		}
 		if cardsType == Bomb || cardsType == KingBomb {
-			r.Mutil += 2
+			r.Multi += 2
 		}
 
 		p.PlayCards(cards)
@@ -244,7 +244,7 @@ func (r *Room) PlayCards(p *Player, cards []Card) CardsType {
 	if len(p.Cards) <= 0 {
 		r.winRole = p.Role
 		if r.IsSpring {
-			r.Mutil += 2
+			r.Multi += 2
 		}
 		r.GameOver()
 	}
@@ -259,9 +259,9 @@ func (r *Room) Settle() {
 		if r.winRole != p.Role {
 			var c int64
 			if r.winRole == 1 {
-				c = utils.Minint64(GetCoin(p.ID), r.Score*int64(r.Mutil))
+				c = utils.Minint64(GetCoin(p.ID), r.Score*int64(r.Multi))
 			} else {
-				c = utils.Minint64(GetCoin(p.ID), r.Score*int64(r.Mutil))
+				c = utils.Minint64(GetCoin(p.ID), r.Score*int64(r.Multi))
 			}
 			CoinPool += c
 			AddCoin(p.ID, -c)
@@ -287,17 +287,17 @@ func (r *Room) Settle() {
 	}
 	r.SettleInfo["win_coins_data"] = winCoinsData
 	r.SettleInfo["win_role"] = r.winRole
-	r.SettleInfo["multi"] = r.Mutil
+	r.SettleInfo["multi"] = r.Multi
 }
 
 // 游戏结束
 func (r *Room) GameOver() {
 	r.Settle()
 	r.Score = 1
+	r.Multi = 1
 	r.GameStatus = 0
 	r.MaxCallSocre = 0
 	r.CallScoreNum = 0
-	r.Mutil = 0
 	r.BeforeCards = r.BeforeCards[:0]
 	r.BeforePlayDesk = 0
 	r.IsSpring = false
@@ -343,6 +343,7 @@ func (r *Room) GetRet(p *Player) utils.Dict {
 		"room_id":        r.ID,
 		"game_status":    r.GameStatus,
 		"score":          r.Score,
+		"score_multi":    r.Multi,
 		"call_desk":      r.CallDeskID,
 		"max_call_score": r.MaxCallSocre,
 		"played_cards":   CardsToValue(r.BeforeCards),

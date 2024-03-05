@@ -64,6 +64,28 @@ func ValueToCards(cardsVal []int) []Card {
 	return cards
 }
 
+// 统计卡片类型数量
+func countCardsType(cards []Card) [][2]int {
+	cardsVal := make(map[int]int, 0)
+	for _, card := range cards {
+		cardsVal[card.Value] += 1
+	}
+	cardsNum := make([][2]int, 0, len(cardsVal))
+	for key, count := range cardsVal {
+		cardsNum = append(cardsNum, [2]int{key, count})
+	}
+	sort.Slice(cardsNum, func(i, j int) bool {
+		if cardsNum[i][1] < cardsNum[j][1] {
+			return true
+		}
+		if cardsNum[i][1] > cardsNum[j][1] {
+			return false
+		}
+		return cardsNum[i][0] < cardsNum[j][0]
+	})
+	return cardsNum
+}
+
 // 判断是否为对子
 func isPair(cards []Card) bool {
 	if len(cards) != 2 {
@@ -88,16 +110,11 @@ func isThreeWithOne(cards []Card) bool {
 	if len(cards) != 4 {
 		return false
 	}
-
-	if cards[0].Value == cards[1].Value && cards[1].Value == cards[2].Value {
-		return true
+	cardsNum := countCardsType(cards)
+	if len(cardsNum) != 2 {
+		return false
 	}
-
-	if cards[1].Value == cards[2].Value && cards[2].Value == cards[3].Value {
-		return true
-	}
-
-	return false
+	return cardsNum[0][1] == 1
 }
 
 // 判断是否为三带二
@@ -105,16 +122,11 @@ func isThreeWithTwo(cards []Card) bool {
 	if len(cards) != 5 {
 		return false
 	}
-
-	if cards[0].Value == cards[1].Value && cards[1].Value == cards[2].Value && cards[3].Value == cards[4].Value {
-		return true
+	cardsNum := countCardsType(cards)
+	if len(cardsNum) != 2 {
+		return false
 	}
-
-	if cards[0].Value == cards[1].Value && cards[2].Value == cards[3].Value && cards[3].Value == cards[4].Value {
-		return true
-	}
-
-	return false
+	return cardsNum[0][1] == 2
 }
 
 // 判断是否为顺子
@@ -166,47 +178,62 @@ func isPairStraight(cards []Card) bool {
 		return false
 	}
 
-	for i := 0; i < len(cards); i += 2 {
-		if cards[i].Value != cards[i+1].Value {
+	cardsNum := countCardsType(cards)
+	for i := 0; i < len(cardsNum); i++ {
+		if cardsNum[i][0] > 14 {
 			return false
 		}
-		if i+2 < len(cards)-1 && cards[i].Value+1 != cards[i+2].Value {
+		if cardsNum[i][1] != 2 {
+			return false
+		}
+		if i < len(cardsNum)-1 && cardsNum[i][0]+1 != cardsNum[i+1][0] {
 			return false
 		}
 	}
 	return true
 }
 
-// 判读飞机的数量 最小飞机值
+// 判读3带的数量 最小飞机值
 func PlaneInfo(cards []Card) (int, int) {
-	countMap := make(map[Card]int)
-	planes := make([]Card, 0)
-	for _, card := range cards {
-		countMap[card]++
-		if countMap[card] == 3 && card.Value <= 14 {
-			planes = append(planes, card)
+	cardsNum := countCardsType(cards)
+	cardsNumWith3 := []int{}
+	for _, cardNum := range cardsNum {
+		if cardNum[1] >= 3 {
+			cardsNumWith3 = append(cardsNumWith3, cardNum[0])
 		}
 	}
-
-	if len(planes) == 0 {
+	if len(cardsNumWith3) <= 0 {
 		return 0, 0
 	}
+	sort.Slice(cardsNumWith3, func(i, j int) bool {
+		return cardsNumWith3[i] < cardsNumWith3[0]
+	})
 
-	minPlane := 0
-	maxLength := 1
-	currentLength := 1
-	for i := 1; i < len(planes); i++ {
-		if planes[i-1].Value+1 == planes[i].Value {
-			currentLength++
+	maxPlaneNum := 0
+	minPlaneVal := 0
+	curPlaneNum := 1
+	curMinPlaneVal := cardsNumWith3[0]
+
+	for i := 1; i < len(cardsNumWith3); i++ {
+		if cardsNumWith3[i] == cardsNumWith3[i-1]+1 {
+			curPlaneNum += 1
+			if curMinPlaneVal == 0 {
+				curMinPlaneVal = cardsNumWith3[i]
+			}
 		} else {
-			currentLength = 1
-		}
-		if currentLength > maxLength {
-			maxLength = currentLength
-			minPlane = planes[i-currentLength+1].Value
+			if curPlaneNum > maxPlaneNum {
+				maxPlaneNum = curPlaneNum
+				minPlaneVal = curMinPlaneVal
+			}
+			curPlaneNum = 1
+			curMinPlaneVal = 0
 		}
 	}
-	return maxLength, minPlane
+	if curPlaneNum > maxPlaneNum {
+		maxPlaneNum = curPlaneNum
+		minPlaneVal = curMinPlaneVal
+	}
+	return maxPlaneNum, minPlaneVal
 }
 
 // 判断是否为飞机不带翅膀
@@ -254,16 +281,8 @@ func isFourWithTow(cards []Card) bool {
 	if len(cards) != 6 {
 		return false
 	}
-	cardsVal := make(map[int]int)
-	for _, card := range cards {
-		cardsVal[card.Value] += 1
-	}
-	for _, count := range cardsVal {
-		if count == 4 {
-			return true
-		}
-	}
-	return false
+	cardsNum := countCardsType(cards)
+	return cardsNum[len(cards)-1][1] == 4
 }
 
 // 四带二对子
@@ -271,21 +290,11 @@ func isFourWithTowPair(cards []Card) bool {
 	if len(cards) != 8 {
 		return false
 	}
-	cardsVal := make(map[int]int)
-	for _, card := range cards {
-		cardsVal[card.Value] += 1
-	}
-	if len(cardsVal) != 3 {
+	cardsNum := countCardsType(cards)
+	if len(cardsNum) != 3 {
 		return false
 	}
-	cardNum := []int{}
-	for _, count := range cardsVal {
-		cardNum = append(cardNum, count)
-	}
-	sort.Slice(cardNum, func(i, j int) bool {
-		return cardNum[i] < cardNum[j]
-	})
-	return cardNum[0] == cardNum[1] && cardNum[2] == 4
+	return cardsNum[0][1] == cardsNum[1][1] && cardsNum[2][1] == 4
 }
 
 // 判读出牌类型

@@ -221,6 +221,7 @@ func ReqCallScore(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 			"call_desk":      r.CallDeskID,
 			"last_cards":     last_cards,
 			"max_call_score": r.MaxCallSocre,
+			"score_mulit":    r.Multi,
 		},
 	)
 	ret["call_desk"] = r.CallDeskID
@@ -229,6 +230,7 @@ func ReqCallScore(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 	ret["game_status"] = r.GameStatus
 	ret["last_cards"] = last_cards
 	ret["max_call_score"] = r.MaxCallSocre
+	ret["score_mulit"] = r.Multi
 	return ret
 }
 
@@ -277,9 +279,10 @@ func ReqPlayCards(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 	ret["cards_type"] = cardsType
 	ret["game_status"] = game_status
 	ret["call_desk"] = r.CallDeskID
-	ret["played_cards"] = data["cards"]
+	ret["played_cards"] = CardsToValue(r.BeforeCards)
 	ret["players_cards"] = players_cards
 	ret["settle_info"] = r.SettleInfo
+	ret["score_multi"] = r.Multi
 
 	// 提示其他玩家 我的出牌
 	ctx.ZClient.BroastMessage(
@@ -289,11 +292,12 @@ func ReqPlayCards(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 		utils.Dict{
 			"call_desk":     r.CallDeskID,
 			"game_status":   game_status,
-			"played_cards":  data["cards"],
+			"played_cards":  CardsToValue(r.BeforeCards),
 			"cards_type":    cardsType,
 			"card_num":      len(ctx.Player.Cards),
 			"players_cards": players_cards,
 			"settle_info":   r.SettleInfo,
+			"score_multi":   r.Multi,
 		},
 	)
 	return ret
