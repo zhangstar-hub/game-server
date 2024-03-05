@@ -7,19 +7,21 @@ import (
 type CardsType = int
 
 const (
-	Unknown           CardsType = iota // 未知牌型
-	Single                             // 单张
-	Pair                               // 对子
-	Three                              // 三张
-	Straight                           // 顺子
-	PairStraight                       // 连对
-	ThreeWithOne                       // 三带一
-	ThreeWithTwo                       // 三带二
-	Bomb                               // 炸弹
-	KingBomb                           // 王炸
-	PlaneWithoutWings                  // 飞机不带翅膀
-	PlaneWithSingle                    // 飞机带单牌
-	PlaneWithPair                      // 飞机带对子
+	Unknown           CardsType = 0  // 未知牌型
+	Single                      = 1  // 单张
+	Pair                        = 2  // 对子
+	Three                       = 3  // 三张
+	Straight                    = 4  // 顺子
+	PairStraight                = 5  // 连对
+	ThreeWithOne                = 6  // 三带一
+	ThreeWithTwo                = 7  // 三带二
+	Bomb                        = 8  // 炸弹
+	KingBomb                    = 9  // 王炸
+	PlaneWithoutWings           = 10 // 飞机不带翅膀
+	PlaneWithSingle             = 11 // 飞机带单牌
+	PlaneWithPair               = 12 // 飞机带对子
+	FourWithTow                 = 13 // 四带二
+	FourWithTowPair             = 14 // 四带两对
 )
 
 // 定义牌的类型
@@ -87,10 +89,6 @@ func isThreeWithOne(cards []Card) bool {
 		return false
 	}
 
-	sort.Slice(cards, func(i, j int) bool {
-		return cards[i].Value < cards[j].Value
-	})
-
 	if cards[0].Value == cards[1].Value && cards[1].Value == cards[2].Value {
 		return true
 	}
@@ -108,10 +106,6 @@ func isThreeWithTwo(cards []Card) bool {
 		return false
 	}
 
-	sort.Slice(cards, func(i, j int) bool {
-		return cards[i].Value < cards[j].Value
-	})
-
 	if cards[0].Value == cards[1].Value && cards[1].Value == cards[2].Value && cards[3].Value == cards[4].Value {
 		return true
 	}
@@ -128,9 +122,6 @@ func isStraight(cards []Card) bool {
 	if len(cards) < 5 {
 		return false
 	}
-	sort.Slice(cards, func(i, j int) bool {
-		return cards[i].Value < cards[j].Value
-	})
 	for i := 0; i < len(cards)-1; i++ {
 		if cards[i].Value > 14 {
 			return false
@@ -175,19 +166,14 @@ func isPairStraight(cards []Card) bool {
 		return false
 	}
 
-	sort.Slice(cards, func(i, j int) bool {
-		return cards[i].Value < cards[j].Value
-	})
-
-	for i := 0; i < len(cards)-1; i += 2 {
+	for i := 0; i < len(cards); i += 2 {
 		if cards[i].Value != cards[i+1].Value {
 			return false
 		}
-		if i > 0 && cards[i].Value != cards[i-1].Value+1 {
+		if i+2 < len(cards)-1 && cards[i].Value+1 != cards[i+2].Value {
 			return false
 		}
 	}
-
 	return true
 }
 
@@ -205,10 +191,6 @@ func PlaneInfo(cards []Card) (int, int) {
 	if len(planes) == 0 {
 		return 0, 0
 	}
-
-	sort.Slice(planes, func(i, j int) bool {
-		return planes[i].Value < planes[j].Value
-	})
 
 	minPlane := 0
 	maxLength := 1
@@ -233,7 +215,7 @@ func isPlaneWithoutWings(cards []Card) bool {
 		return false
 	}
 	planeNum, _ := PlaneInfo(cards)
-	return planeNum == len(cards)%3
+	return planeNum == len(cards)/3
 }
 
 // 判断是否为飞机带单牌
@@ -242,7 +224,7 @@ func isPlaneWithSingle(cards []Card) bool {
 		return false
 	}
 	planeNum, _ := PlaneInfo(cards)
-	return planeNum >= len(cards)%4
+	return planeNum >= len(cards)/4
 }
 
 // 判断是否为飞机带对子
@@ -264,11 +246,53 @@ func isPlaneWithPair(cards []Card) bool {
 			planes++
 		}
 	}
-	return pairs == planes && planes == len(cards)%5
+	return pairs == planes && planes == len(cards)/5
+}
+
+// 四带二
+func isFourWithTow(cards []Card) bool {
+	if len(cards) != 6 {
+		return false
+	}
+	cardsVal := make(map[int]int)
+	for _, card := range cards {
+		cardsVal[card.Value] += 1
+	}
+	for _, count := range cardsVal {
+		if count == 4 {
+			return true
+		}
+	}
+	return false
+}
+
+// 四带二对子
+func isFourWithTowPair(cards []Card) bool {
+	if len(cards) != 8 {
+		return false
+	}
+	cardsVal := make(map[int]int)
+	for _, card := range cards {
+		cardsVal[card.Value] += 1
+	}
+	if len(cardsVal) != 3 {
+		return false
+	}
+	cardNum := []int{}
+	for _, count := range cardsVal {
+		cardNum = append(cardNum, count)
+	}
+	sort.Slice(cardNum, func(i, j int) bool {
+		return cardNum[i] < cardNum[j]
+	})
+	return cardNum[0] == cardNum[1] && cardNum[2] == 4
 }
 
 // 判读出牌类型
 func GetCardsType(cards []Card) CardsType {
+	sort.Slice(cards, func(i, j int) bool {
+		return cards[i].Value < cards[j].Value
+	})
 	switch len(cards) {
 	case 1: // 单张
 		return Single
@@ -288,7 +312,7 @@ func GetCardsType(cards []Card) CardsType {
 		} else if isBomb(cards) {
 			return Bomb
 		}
-	default: // 顺子 连对 飞机 三带二 飞机
+	default: // 顺子 连对 飞机 三带二 飞机 四带二
 		if isThreeWithTwo(cards) {
 			return ThreeWithTwo
 		} else if isPairStraight(cards) {
@@ -301,6 +325,10 @@ func GetCardsType(cards []Card) CardsType {
 			return PlaneWithSingle
 		} else if isPlaneWithPair(cards) {
 			return PlaneWithPair
+		} else if isFourWithTow(cards) {
+			return FourWithTow
+		} else if isFourWithTowPair(cards) {
+			return FourWithTowPair
 		}
 	}
 	return Unknown

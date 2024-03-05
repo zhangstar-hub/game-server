@@ -160,6 +160,7 @@ func (r *Room) StartPlay() {
 	r.GameStatus = 1
 	r.CallDeskID = rand.Intn(3)
 	r.SettleInfo = utils.Dict{}
+	r.BeforePlayDesk = r.CallDeskID
 	// 发牌
 	cards := NewCards()
 	ShuffleCards(cards)
@@ -218,14 +219,15 @@ func (r *Room) PlayCards(p *Player, cards []Card) CardsType {
 	if r.BeforePlayDesk == p.DeskID && len(cards) == 0 {
 		panic(errors.New("your cards are empty"))
 	}
+	fmt.Printf("cards: %v\n", cards)
 	cardsType := GetCardsType(cards)
 	if len(cards) > 0 {
-		// if cardsType == Unknown {
-		// 	panic(errors.New("unknown cards type"))
-		// }
-		// if r.BeforePlayDesk != p.DeskID && len(r.BeforeCards) > 0 && !IsValidPlay(r.BeforeCards, cards) {
-		// 	panic(errors.New("can't play cards"))
-		// }
+		if cardsType == Unknown {
+			panic(errors.New("unknown cards type"))
+		}
+		if r.BeforePlayDesk != p.DeskID && len(r.BeforeCards) > 0 && !IsValidPlay(r.BeforeCards, cards) {
+			panic(errors.New("can't play cards"))
+		}
 		if cardsType == Bomb || cardsType == KingBomb {
 			r.Mutil += 2
 		}
@@ -337,14 +339,15 @@ func (r *Room) PlayersInfo() []utils.Dict {
 
 func (r *Room) GetRet(p *Player) utils.Dict {
 	ret := utils.Dict{
-		"uid":          p.ID,
-		"room_id":      r.ID,
-		"game_status":  r.GameStatus,
-		"score":        r.Score,
-		"call_desk":    r.CallDeskID,
-		"played_cards": CardsToValue(r.BeforeCards),
-		"cards":        CardsToValue(p.Cards),
-		"last_cards":   CardsToValue(r.LastCards),
+		"uid":            p.ID,
+		"room_id":        r.ID,
+		"game_status":    r.GameStatus,
+		"score":          r.Score,
+		"call_desk":      r.CallDeskID,
+		"max_call_score": r.MaxCallSocre,
+		"played_cards":   CardsToValue(r.BeforeCards),
+		"cards":          CardsToValue(p.Cards),
+		"last_cards":     CardsToValue(r.LastCards),
 	}
 	ret["players"] = r.PlayersInfo()
 	return ret

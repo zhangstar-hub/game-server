@@ -40,7 +40,7 @@ func PlayerLoadData(ctx *Ctx) {
 			DeskID:    0,
 			Role:      1,
 			Ready:     false,
-			CallScore: 0,
+			CallScore: -1,
 			Name:      ctx.User.Name,
 			Avatar:    ctx.User.Avatar,
 		}
@@ -81,7 +81,7 @@ func (p *Player) Reset() {
 	p.Cards = []Card{}
 	p.Ready = false
 	p.Role = 1
-	p.CallScore = 0
+	p.CallScore = -1
 }
 
 // 数据获取

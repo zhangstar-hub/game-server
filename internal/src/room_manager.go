@@ -2,7 +2,6 @@ package src
 
 import (
 	"context"
-	"fmt"
 	"my_app/internal/utils"
 	"sync"
 	"sync/atomic"
@@ -202,8 +201,6 @@ func ReqCallScore(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 		return
 	}
 	r.CallScore(ctx.Player, score)
-	fmt.Printf("r.MaxCallSocre: %v\n", r.MaxCallSocre)
-	fmt.Printf("r.CallScoreNum: %v\n", r.CallScoreNum)
 
 	last_cards := []int{}
 	if score == 3 || r.CallScoreNum == 3 {
@@ -227,6 +224,7 @@ func ReqCallScore(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 		},
 	)
 	ret["call_desk"] = r.CallDeskID
+	ret["call_score"] = ctx.Player.CallScore
 	ret["cards"] = CardsToValue(ctx.Player.Cards)
 	ret["game_status"] = r.GameStatus
 	ret["last_cards"] = last_cards
