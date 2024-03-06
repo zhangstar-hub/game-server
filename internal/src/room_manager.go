@@ -38,17 +38,21 @@ func (m *RoomManager) EnterRoom(ctx *Ctx) (room *Room) {
 		}
 		return true
 	})
-	for !success {
-		atomic.AddUint32(&m.RoomCounter, 1)
-		room = NewRoom(ctx.ZClient)
-		room.ID = uint32(m.RoomCounter)
-		m.Rooms.Store(m.RoomCounter, room)
-		if success = room.EnterRoom(ctx.Player); success {
-			break
-		}
+	if !success {
+		room = m.EnterNewRoom(ctx, 1)
 	}
 	ctx.User.RoomID = uint32(room.ID)
 	return
+}
+
+// 创建新房间
+func (m *RoomManager) EnterNewRoom(ctx *Ctx, multi int) *Room {
+	room := NewRoom(ctx.ZClient)
+	room.Multi = multi
+	room.ID = atomic.AddUint32(&m.RoomCounter, 1)
+	room.EnterRoom(ctx.Player)
+	m.Rooms.Store(room.ID, room)
+	return room
 }
 
 // 定时清理空房间
@@ -125,8 +129,22 @@ func ReqLeaveRoom(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 	ok, room := ctx.RoomManager.GetRoom(ctx.User.RoomID, ctx.User.ID)
 	if !ok {
 		ret["error"] = "not in room"
+		return ret
 	}
 	room.LeaveRoom(ctx)
+	return ret
+}
+
+// 进入一个新房间
+func ReqEnterNewRoom(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
+	multi := int(data["multi"].(float64))
+	ret = make(utils.Dict)
+	ok, room := ctx.RoomManager.GetRoom(ctx.User.RoomID, ctx.User.ID)
+	if ok {
+		room.LeaveRoom(ctx)
+	}
+	room = ctx.RoomManager.EnterNewRoom(ctx, multi)
+	ret["room"] = room.GetRet(ctx.Player)
 	return ret
 }
 

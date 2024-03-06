@@ -258,10 +258,10 @@ func (r *Room) Settle() {
 	for _, p := range r.Players {
 		if r.winRole != p.Role {
 			var c int64
-			if r.winRole == 1 {
+			if p.Role == 1 {
 				c = utils.Minint64(GetCoin(p.ID), r.Score*int64(r.Multi))
 			} else {
-				c = utils.Minint64(GetCoin(p.ID), r.Score*int64(r.Multi))
+				c = utils.Minint64(GetCoin(p.ID), r.Score*int64(r.Multi)*2)
 			}
 			CoinPool += c
 			AddCoin(p.ID, -c)
