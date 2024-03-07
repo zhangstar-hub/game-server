@@ -16,7 +16,7 @@ type Room struct {
 	BeforeCards    []Card       // 上一次出牌
 	BeforePlayDesk int          // 上一次出牌的位置
 	Players        [3]*Player   // 玩家
-	Score          int64        // 分数
+	BaseScore      int          // 分数
 	Multi          int          // 倍数
 	mu             sync.RWMutex // 一个锁
 	GameStatus     int          // 游戏状态 0：准备 1:叫分 2:进行
@@ -35,7 +35,7 @@ type Room struct {
 func NewRoom(ZClient ZMQInterface) *Room {
 	return &Room{
 		Players:    [3]*Player{},
-		Score:      1,
+		BaseScore:  1,
 		Multi:      1,
 		mu:         sync.RWMutex{},
 		GameStatus: 0,
@@ -188,7 +188,7 @@ func (r *Room) CallScore(p *Player, score int) {
 	p.Call(score)
 	if r.MaxCallSocre < score {
 		r.MaxCallSocre = score
-		r.Multi = score
+		r.Multi *= score
 	}
 	r.CallScoreNum += 1
 	if r.CallScoreNum >= 3 || score == 3 {
@@ -229,7 +229,7 @@ func (r *Room) PlayCards(p *Player, cards []Card) CardsType {
 			panic(errors.New("can't play cards"))
 		}
 		if cardsType == Bomb || cardsType == KingBomb {
-			r.Multi += 2
+			r.Multi *= 2
 		}
 
 		p.PlayCards(cards)
@@ -244,7 +244,7 @@ func (r *Room) PlayCards(p *Player, cards []Card) CardsType {
 	if len(p.Cards) <= 0 {
 		r.winRole = p.Role
 		if r.IsSpring {
-			r.Multi += 2
+			r.Multi *= 2
 		}
 		r.GameOver()
 	}
@@ -259,9 +259,9 @@ func (r *Room) Settle() {
 		if r.winRole != p.Role {
 			var c int64
 			if p.Role == 1 {
-				c = utils.Minint64(GetCoin(p.ID), r.Score*int64(r.Multi))
+				c = utils.Minint64(GetCoin(p.ID), int64(r.BaseScore*r.Multi))
 			} else {
-				c = utils.Minint64(GetCoin(p.ID), r.Score*int64(r.Multi)*2)
+				c = utils.Minint64(GetCoin(p.ID), int64(r.BaseScore*r.Multi)*2)
 			}
 			CoinPool += c
 			AddCoin(p.ID, -c)
@@ -293,7 +293,6 @@ func (r *Room) Settle() {
 // 游戏结束
 func (r *Room) GameOver() {
 	r.Settle()
-	r.Score = 1
 	r.Multi = 1
 	r.GameStatus = 0
 	r.MaxCallSocre = 0
@@ -342,8 +341,7 @@ func (r *Room) GetRet(p *Player) utils.Dict {
 		"uid":            p.ID,
 		"room_id":        r.ID,
 		"game_status":    r.GameStatus,
-		"score":          r.Score,
-		"score_multi":    r.Multi,
+		"score_multi":    r.Multi * r.BaseScore,
 		"call_desk":      r.CallDeskID,
 		"max_call_score": r.MaxCallSocre,
 		"played_cards":   CardsToValue(r.BeforeCards),

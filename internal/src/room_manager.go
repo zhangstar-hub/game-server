@@ -46,12 +46,13 @@ func (m *RoomManager) EnterRoom(ctx *Ctx) (room *Room) {
 }
 
 // 创建新房间
-func (m *RoomManager) EnterNewRoom(ctx *Ctx, multi int) *Room {
+func (m *RoomManager) EnterNewRoom(ctx *Ctx, baseScore int) *Room {
 	room := NewRoom(ctx.ZClient)
-	room.Multi = multi
+	room.BaseScore = baseScore
 	room.ID = atomic.AddUint32(&m.RoomCounter, 1)
 	room.EnterRoom(ctx.Player)
 	m.Rooms.Store(room.ID, room)
+	ctx.User.RoomID = uint32(room.ID)
 	return room
 }
 
@@ -137,13 +138,13 @@ func ReqLeaveRoom(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 
 // 进入一个新房间
 func ReqEnterNewRoom(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
-	multi := int(data["multi"].(float64))
+	baseScore := int(data["base_score"].(float64))
 	ret = make(utils.Dict)
 	ok, room := ctx.RoomManager.GetRoom(ctx.User.RoomID, ctx.User.ID)
 	if ok {
 		room.LeaveRoom(ctx)
 	}
-	room = ctx.RoomManager.EnterNewRoom(ctx, multi)
+	room = ctx.RoomManager.EnterNewRoom(ctx, baseScore)
 	ret["room"] = room.GetRet(ctx.Player)
 	return ret
 }
@@ -300,7 +301,7 @@ func ReqPlayCards(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 	ret["played_cards"] = CardsToValue(r.BeforeCards)
 	ret["players_cards"] = players_cards
 	ret["settle_info"] = r.SettleInfo
-	ret["score_multi"] = r.Multi
+	ret["score_multi"] = r.Multi * r.BaseScore
 
 	// 提示其他玩家 我的出牌
 	ctx.ZClient.BroastMessage(
@@ -315,7 +316,7 @@ func ReqPlayCards(ctx *Ctx, data utils.Dict) (ret utils.Dict) {
 			"card_num":      len(ctx.Player.Cards),
 			"players_cards": players_cards,
 			"settle_info":   r.SettleInfo,
-			"score_multi":   r.Multi,
+			"score_multi":   r.Multi * r.BaseScore,
 		},
 	)
 	return ret
